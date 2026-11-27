@@ -10,8 +10,8 @@ _Last updated: 2026-11-27_
 
 | Phase | Title                                    | Status                                                                                  | Gate evidence                                                                                                 |
 | ----- | ---------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| 0     | Reconnaissance & specification anchoring | verified — accepted by owner 2026-11-27                                                 | Commit `5d7c2cb`; baseline below                                                                              |
-| 1     | Foundation                               | **ACCEPTED** by owner 2026-11-27 (verified); independent audit pending                  | Code commit `e0fd9eb`; local gates and CI run #1 passed; see "Phase 1 gate evidence" and "Phase 1 acceptance" |
+| 0     | Reconnaissance & specification anchoring | verified — accepted by owner 2026-11-27                                                 | Commit `b963239`; baseline below                                                                              |
+| 1     | Foundation                               | **ACCEPTED** by owner 2026-11-27 (verified); independent audit pending                  | Code commit `f383bc0`; local gates and CI run #1 passed; see "Phase 1 gate evidence" and "Phase 1 acceptance" |
 | 2     | Tenant & identity                        | not started — **not authorized**; waiting for the Phase 1 audit and owner authorization | Blocked on [G-01, G-03–G-07](GAPS.md) decisions                                                               |
 | 3     | Customer platform foundation             | not started                                                                             | —                                                                                                             |
 | 4     | Menu domain                              | not started                                                                             | —                                                                                                             |
@@ -122,7 +122,7 @@ The same cases are automated in `tests/startup/env-rejection.test.ts`.
 | Item                 | Value                                                                                                                                                                                                                                                                          |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Run                  | CI #1, run id `45929039778`, job `140277112902` (`ubuntu-latest`)                                                                                                                                                                                                              |
-| Commit               | `e0fd9eb43863dd25c816290b079ca16af550b104` on `claude/new-session-7xxuoq`                                                                                                                                                                                                      |
+| Commit               | `f383bc09b9099445f399a5d7f5645d54f9bd4835` on `claude/new-session-7xxuoq`                                                                                                                                                                                                      |
 | Conclusion           | **success** (started 2026-11-27T02:33:36Z, completed 02:34:38Z)                                                                                                                                                                                                                |
 | Toolchain (from log) | Node v24.22.3, pnpm 12.22.0; "Lockfile is up to date" with `--frozen-lockfile`                                                                                                                                                                                                 |
 | Steps                | install, format, lint, typecheck, test (contracts 12, web 3, api 25, tests 14), arch (55 modules, 59 dependencies, no violations), build, Playwright Chromium install (v1243, matching D-006), e2e **6 passed**. The upload-report step was skipped (it runs only on failure). |
@@ -132,8 +132,8 @@ Later documentation-only commits on the same branch:
 
 | Run                   | Commit                     | Conclusion                                                                                                                                                                             |
 | --------------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CI #2 (`45929507482`) | `10199e8` (STATUS.md only) | **cancelled**: superseded by run #3 under the workflow's `cancel-in-progress` concurrency rule, a few seconds after it started. Not a failure, and it produced no verification result. |
-| CI #3 (`45929527945`) | `0787737` (STATUS.md only) | **success**                                                                                                                                                                            |
+| CI #2 (`45929507482`) | `70694d2` (STATUS.md only) | **cancelled**: superseded by run #3 under the workflow's `cancel-in-progress` concurrency rule, a few seconds after it started. Not a failure, and it produced no verification result. |
+| CI #3 (`45929527945`) | `3a9009e` (STATUS.md only) | **success**                                                                                                                                                                            |
 
 ## Phase 1 acceptance
 
@@ -143,5 +143,31 @@ Later documentation-only commits on the same branch:
 | Accepted decisions            | P-101 – P-110 (verified); D-004, D-006, D-008, D-009 (approved); D-007 (approved, scoped to the NestJS decorated-class exception only); D-005 (approved **provisionally**, with conditions; review by the Phase 10 gate at the latest) — see [`DECISIONS.md`](DECISIONS.md) |
 | Unresolved                    | Everything in [`GAPS.md`](GAPS.md) marked `open` remains open, including G-01 (incomplete Doc 02), G-03–G-13 and G-29–G-35. Acceptance of Phase 1 does not resolve any of them.                                                                                             |
 | Independent audit             | **Pending.** The owner has requested an independent audit of the Phase 1 implementation by a second reviewer ("Account 2") before Phase 2. Review packet: [`audit/phase-1-review-packet.md`](audit/phase-1-review-packet.md).                                               |
-| Code changes after acceptance | None. Only documentation changed after `e0fd9eb`. No further code changes without explicit owner authorization.                                                                                                                                                             |
+| Code changes after acceptance | None. Only documentation changed after `f383bc0`. No further code changes without explicit owner authorization.                                                                                                                                                             |
 | Phase 2                       | Not authorized.                                                                                                                                                                                                                                                             |
+
+## Commit history rewrite (2026-11-27)
+
+**Authorization:** owner instruction (never put session links on GitHub; attribute commits as
+"Built by Deepak, assisted by Claude.") and explicit owner approval ("Yes") to rewrite the existing
+commit messages and force-push `claude/new-session-7xxuoq`.
+
+**What changed:** only the commit messages of the six commits after `075182c`. `Claude-Session:`
+links and agent `Co-Authored-By:` trailers were removed, and the attribution line was added.
+`075182c Initial commit` is untouched. **No file content changed**: each rewritten commit has the
+same git tree hash as its original.
+
+| Original commit                            | Rewritten commit                           | Tree (identical)                           | Subject                                         |
+| ------------------------------------------ | ------------------------------------------ | ------------------------------------------ | ----------------------------------------------- |
+| `5d7c2cb477a928a5695361316371126839280527` | `b963239f09c1260314589861941ace50e9f28f1f` | `5946ec290347472475f719b0177f99e1c1ed61d2` | Phase 0: specifications and governance docs     |
+| `e0fd9eb43863dd25c816290b079ca16af550b104` | `f383bc09b9099445f399a5d7f5645d54f9bd4835` | `3cdbc960eff86ca152f56c03ef80998863570eb8` | Phase 1: foundation scaffold (**audited code**) |
+| `10199e813cb9045a4219c3d682811c800723cffe` | `70694d2372ff6e6cd887945026ba55fc34d70728` | `472c4b744d804c4aafeb3bb311e79e1f33a34478` | Phase 1: record CI evidence                     |
+| `0787737da3044cb0727ed5924766d84e78073bbd` | `3a9009ec6e4704996103a8972f8b7a9334580ff1` | `37c5f0caeb8ee7484d49649d9fe7a2658fd49149` | Phase 1: ledger row fix                         |
+| `57c7430280046ee4455550100d49eabdd26c8521` | `afc1b98abecf2a0c3b85f4b3570182137f4dfc29` | `008cbfef70109db6fbe5d8a6de0854df32a950d8` | Phase 1: acceptance records and audit packet    |
+| `8c118e8a2c7cf3f6288b878c32001ac9c20c53dd` | `3b328786a11a650054511ee89ce2941070f6701c` | `0d10724e004cf9d3b5168218d87995f41846fa84` | Docs: attribution convention                    |
+
+**Effect on evidence:** CI runs #1 (`45929039778`), #2 and #3 ran on the **original** commit IDs.
+In GitHub Actions they are listed under those IDs, which are no longer on the branch. Because the
+trees are identical, run #1's result applies to the same code as `f383bc0`; this can be checked with
+`git rev-parse f383bc0^{tree}` → `3cdbc960…`. CI runs again on the rewritten branch head when it is
+pushed.

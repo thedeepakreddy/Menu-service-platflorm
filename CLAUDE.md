@@ -30,7 +30,7 @@ them, the documents in `docs/` win and this file should be corrected.
 
 ## Attribution on GitHub (owner instruction)
 
-- Never put session links (e.g. `claude.ai/code/session_…`, `Claude-Session:` trailers) in commit
+- Never put session links (links to the AI coding session, or `Claude-Session:` trailers) in commit
   messages, PR descriptions, comments, code or documentation.
 - End every commit message, PR description and GitHub comment with the line:
   `Built by Deepak, assisted by Claude.`

@@ -9,15 +9,16 @@ evidence.
 
 ## 1. What to review
 
-| Item                    | Value                                                                                                                                                             |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Repository              | `thedeepakreddy/Menu-service-platflorm`                                                                                                                           |
-| Branch                  | `claude/new-session-7xxuoq` (not merged; no PR)                                                                                                                   |
-| Phase 0 commit          | `5d7c2cb` — specifications and governance docs                                                                                                                    |
-| **Phase 1 code commit** | **`e0fd9eb43863dd25c816290b079ca16af550b104`** — all Phase 1 code and config                                                                                      |
-| Later commits           | Documentation only (`docs/` files). Confirm with `git diff --stat e0fd9eb..HEAD`.                                                                                 |
-| Review diff             | `git diff 5d7c2cb e0fd9eb` (88 files)                                                                                                                             |
-| Governing sources       | `docs/specifications/` (Docs 01–05; checksums in `docs/README.md`), the approved Phase 1 plan and decisions in `docs/DECISIONS.md` (P-101 – P-110, D-004 – D-009) |
+| Item                    | Value                                                                                                                                                                                                                                |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Repository              | `thedeepakreddy/Menu-service-platflorm`                                                                                                                                                                                              |
+| Branch                  | `claude/new-session-7xxuoq` (not merged; no PR)                                                                                                                                                                                      |
+| Phase 0 commit          | `b963239` — specifications and governance docs                                                                                                                                                                                       |
+| **Phase 1 code commit** | **`f383bc09b9099445f399a5d7f5645d54f9bd4835`** — all Phase 1 code and config                                                                                                                                                         |
+| Later commits           | Documentation only (`docs/`, `README.md`, `CLAUDE.md`). Confirm with `git diff --stat f383bc0..HEAD`.                                                                                                                                |
+| History note            | Commit messages after `075182c` were rewritten on 2026-11-27 (owner-authorized; messages only, trees unchanged). The old-to-new mapping is in `docs/STATUS.md` → "Commit history rewrite". CI runs #1–#3 ran on the pre-rewrite IDs. |
+| Review diff             | `git diff b963239 f383bc0` (88 files)                                                                                                                                                                                                |
+| Governing sources       | `docs/specifications/` (Docs 01–05; checksums in `docs/README.md`), the approved Phase 1 plan and decisions in `docs/DECISIONS.md` (P-101 – P-110, D-004 – D-009)                                                                    |
 
 **Phase 1 scope as approved:** monorepo and workspaces; TypeScript, lint and format; Vitest;
 Playwright; CI; environment validation; API, web and shared-package skeletons; documentation;
@@ -27,7 +28,7 @@ deployment and infrastructure, secrets backends.
 
 ## 2. Reproduce the evidence
 
-Requires Node 24 (`.nvmrc`: 24.22.3) and Corepack. From a fresh clone at `e0fd9eb`:
+Requires Node 24 (`.nvmrc`: 24.22.3) and Corepack. From a fresh clone at `f383bc0`:
 
 ```sh
 corepack enable
@@ -68,7 +69,7 @@ rm apps/web/src/__violation.ts && pnpm arch   # expected: clean, exit 0
 | Evidence                                                                                      | Location                                        |
 | --------------------------------------------------------------------------------------------- | ----------------------------------------------- |
 | Local clean-tree gate run, deliberate-violation and invalid-config results                    | `docs/STATUS.md` → "Phase 1 gate evidence"      |
-| CI run #1 on `e0fd9eb` (success), runs #2 (cancelled, superseded) and #3 (success, docs only) | `docs/STATUS.md`; GitHub Actions, workflow "CI" |
+| CI run #1 on `f383bc0` (success), runs #2 (cancelled, superseded) and #3 (success, docs only) | `docs/STATUS.md`; GitHub Actions, workflow "CI" |
 | Decisions, approvals and conditions                                                           | `docs/DECISIONS.md`                             |
 | Open gaps                                                                                     | `docs/GAPS.md`                                  |
 | Requirement → code → test mapping                                                             | `docs/STATUS.md` → "Implementation ledger"      |
