@@ -81,3 +81,31 @@ each one needs a `proposed` → `approved` decision.
 | G-39 | `no-deep-package-imports` covers only `apps/*` importing `packages/*/src/`. A package importing another package's `src/` by relative path is not covered. Found during the remediation; no package-to-package dependency exists yet.                                                                                                                                                                                                                                                   | —      | open (LOW)                                                                                                                                                                                                       |
 | G-40 | `web-no-db-clients` is a denylist of known database clients and ORMs (D-012). Any database client added later, and any workspace database or persistence package introduced in Phase 2, must be added to the rule in the same change.                                                                                                                                                                                                                                                  | 2      | open                                                                                                                                                                                                             |
 | G-41 | Remaining audit findings, tracked in [`audit/phase-1-audit-findings.md`](audit/phase-1-audit-findings.md). Open LOW/INFO residuals: L-02, L-04, L-08, L-09, R-03, R-05, R-07, R-08, R-10 (earlier self-audits) and F-09, F-11, F-12, F-13 (independent audit). Remediated in the independent-audit remediation: F-01 – F-08, F-10. I-02 accepted; I-03 closed by D-023.                                                                                                                | —      | open — residuals accepted at Phase 1 closure; none blocks Phase 2                                                                                                                                                |
+
+## G. Recorded by the Phase 2 audit remediation (2026-11-27)
+
+The remediation report is [`audit/phase-2-remediation-report.md`](audit/phase-2-remediation-report.md).
+Its §22 lists pre-production blockers PP-01 – PP-11.
+
+**Updates to earlier items.**
+
+- **G-33:** `GET /health/ready` now checks the database (503 while unreachable). Liveness is
+  unchanged.
+- **G-34:** resolved by D-031 and D-037. Body: JSON only, ≤ 32 KB. Limits run before parsing.
+- **G-38:** the Phase 2 security baseline is implemented. The outstanding production parts are
+  PP-04 – PP-06.
+- **G-05:** self-service account recovery stays with the identity provider (D-026). Operator-led
+  identity unlink and re-link is now implemented (D-036).
+- **G-19:** the tenant boundary for any future cache or queue is fixed by
+  `infrastructure/tenancy/tenant-boundaries.ts`. The implementation choice is still open.
+
+| ID   | Item                                                                                                                                                                                  | Blocks          | Status                |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | --------------------- |
+| G-42 | ZITADEL token shapes (aud, azp, at_hash, client_id, amr, auth_time) verified in source code only; re-verify on the real instance; JWT access tokens must be configured (PP-02, PP-03) | 10 (production) | open                  |
+| G-43 | Multi-instance enforcement: edge or shared-store rate limits and a shared single-use login store (PP-04, D-037, D-038)                                                                | 10              | open                  |
+| G-44 | Operator audit log shipping to an append-only store of record (PP-05, G-32)                                                                                                           | 10              | open                  |
+| G-45 | Server and proxy request timeouts (audit D-08, PP-06)                                                                                                                                 | 10              | open                  |
+| G-46 | Back-channel logout from the identity provider (PP-07)                                                                                                                                | 10              | open                  |
+| G-47 | Operator account provisioning procedure (audit E-05, PP-09)                                                                                                                           | 10              | open                  |
+| G-48 | Owner invitation flow (SEQ-1 not approved; audit E-02)                                                                                                                                | 6               | open (owner decision) |
+| G-49 | Independent human or third-party security review before production (PP-10)                                                                                                            | 10              | open                  |
