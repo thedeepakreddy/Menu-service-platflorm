@@ -528,3 +528,32 @@ Closure does not resolve G-03 – G-13 or any residual in the findings register.
 certify complete redaction (pattern-based; limits in the security baseline §1) or any tenant
 isolation (none exists yet; it is the Phase 2 gate, D-022). Phase 2 is authorized by the owner,
 conditional on this gate; it starts with the G-03 – G-08 entry decisions.
+
+## Phase 2 — Tenant & identity: progress ledger
+
+**Authorization:** owner, 2026-11-27, conditional on the Phase 1 gate (satisfied). Plan:
+[`architecture/phase-2-plan.md`](architecture/phase-2-plan.md). Decisions: D-024 – D-031.
+**Status: IN PROGRESS — not complete.**
+
+| Milestone                                | Status                     | Commit / evidence                                                                                                                    |
+| ---------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| M2.0 Entry decisions and plan            | done                       | `aa7edec`; spike evidence in `architecture/spikes/`                                                                                  |
+| M2.1 Database foundation and isolation   | done (local); CI pending   | this commit: Kysely/pg, migrations, RLS + FORCE, `withTenant()`, startup role check, `pnpm test:db` (31 real-PostgreSQL tests) in CI |
+| M2.2 Tenant resolution and context       | not started                | —                                                                                                                                    |
+| M2.3 Identity and authorization boundary | not started                | —                                                                                                                                    |
+| M2.4 Provisioning and lifecycle          | not started                | —                                                                                                                                    |
+| M2.5 Abuse controls                      | not started                | —                                                                                                                                    |
+| M2.6 Web BFF session                     | **blocked** — D-025 vendor | owner decision required                                                                                                              |
+
+### M2.1 verification (local, Node 24.22.3, PostgreSQL 16.15 loopback cluster, scram-sha-256)
+
+| Command                                                           | Result                                                                                                                                             |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm format:check`, `lint`, `typecheck`, `test`, `arch`, `build` | exit 0                                                                                                                                             |
+| `pnpm test:db`                                                    | **31 passed**: migrations, RLS catalog, role safety, isolation, fail-closed, pool reuse, 200-way concurrency, source scan, built-API startup check |
+| `pnpm test:e2e` (migrated e2e DB)                                 | **10 passed**                                                                                                                                      |
+
+Mutations (each reverted; all caught): dropping `FORCE` on `memberships` (catalog test);
+`WITH CHECK (true)` on `memberships` (policy test); session-level `set_config(..., false)` in
+`withTenant()` (3 tests: the leak was observed — 2 rows of another tenant's data on a reused
+connection); no `TEST_DATABASE_ADMIN_URL` (suite fails with a clear message, exit 1).

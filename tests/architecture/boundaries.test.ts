@@ -270,6 +270,7 @@ describe('architecture CLI scope (audit N-02)', () => {
       'pnpm test',
       'pnpm arch',
       'pnpm build',
+      'pnpm test:db',
       'pnpm test:e2e',
     ]) {
       expect(ci).toMatch(

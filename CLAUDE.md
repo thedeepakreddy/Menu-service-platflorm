@@ -50,19 +50,31 @@ them, the documents in `docs/` win and this file should be corrected.
 - The API also accepts two optional variables with secure defaults: `API_CORS_ALLOWED_ORIGINS`
   (exact origins; absent = no cross-origin access) and `API_LOG_LEVEL` (default `info`; `debug`
   rejected in staging and production). See `apps/api/.env.example`.
+- **Database (Phase 2, D-024 – D-029).** The API requires `API_DATABASE_URL` (the restricted
+  `app_runtime` role; a secret) and refuses to start as a superuser, a BYPASSRLS role or a table
+  owner. Migrations are plain SQL in `apps/api/migrations/`, applied as `app_owner` with
+  `MIGRATION_DATABASE_URL` by `pnpm --filter @platform/api migrate`. Tenant-scoped queries go
+  only through `withTenant()` (`apps/api/src/infrastructure/database/database.ts`); never call
+  `set_config`/`SET` for `app.tenant_id` anywhere else (a test enforces this). Every new table in
+  schema `app` needs `ENABLE` + `FORCE ROW LEVEL SECURITY` and, if tenant-owned, a `tenant_id`
+  policy with USING and WITH CHECK, or `pnpm test:db` fails.
+- `pnpm test:db` and `pnpm test:e2e` need a **throwaway, loopback** PostgreSQL superuser URL in
+  `TEST_DATABASE_ADMIN_URL`; they fail (never skip) without it. e2e also needs
+  `E2E_API_DATABASE_URL`, printed by `node apps/api/test/db/provision-cli.ts platform_e2e`.
 
 ## Commands (run from the repository root)
 
-| Command             | Purpose                                                                 |
-| ------------------- | ----------------------------------------------------------------------- |
-| `pnpm install`      | Install (CI uses `--frozen-lockfile`)                                   |
-| `pnpm format:check` | Prettier check (`pnpm format` to write)                                 |
-| `pnpm lint`         | ESLint, type-aware, zero warnings allowed                               |
-| `pnpm typecheck`    | `tsc --noEmit` in every package                                         |
-| `pnpm test`         | Vitest: unit, API integration, architecture-boundary and startup tests  |
-| `pnpm arch`         | dependency-cruiser boundary check over the real source tree             |
-| `pnpm build`        | Build all packages and apps                                             |
-| `pnpm test:e2e`     | Playwright smoke tests (starts the built API and web apps); build first |
+| Command             | Purpose                                                                  |
+| ------------------- | ------------------------------------------------------------------------ |
+| `pnpm install`      | Install (CI uses `--frozen-lockfile`)                                    |
+| `pnpm format:check` | Prettier check (`pnpm format` to write)                                  |
+| `pnpm lint`         | ESLint, type-aware, zero warnings allowed                                |
+| `pnpm typecheck`    | `tsc --noEmit` in every package                                          |
+| `pnpm test`         | Vitest: unit, API integration, architecture-boundary and startup tests   |
+| `pnpm test:db`      | Real-PostgreSQL tenant-isolation tests (needs `TEST_DATABASE_ADMIN_URL`) |
+| `pnpm arch`         | dependency-cruiser boundary check over the real source tree              |
+| `pnpm build`        | Build all packages and apps                                              |
+| `pnpm test:e2e`     | Playwright smoke tests (starts the built API and web apps); build first  |
 
 CI (`.github/workflows/ci.yml`) runs all of the above in that order.
 

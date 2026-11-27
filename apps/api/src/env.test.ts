@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest';
 
 import { parseApiEnv } from './env.js';
 
-const valid = { APP_ENV: 'test', API_HOST: '127.0.0.1', API_PORT: '4000' };
+// Synthetic connection string; sslmode=require so production-like cases are valid too.
+const DB_URL = 'postgres://app_runtime:synthetic@db.internal:5432/platform?sslmode=require';
+const valid = {
+  APP_ENV: 'test',
+  API_HOST: '127.0.0.1',
+  API_PORT: '4000',
+  API_DATABASE_URL: DB_URL,
+};
 
 describe('parseApiEnv', () => {
   it('accepts a complete, valid configuration and coerces the port', () => {
@@ -15,6 +22,8 @@ describe('parseApiEnv', () => {
         // Optional variables take their documented secure defaults (D-019, D-020).
         API_CORS_ALLOWED_ORIGINS: [],
         API_LOG_LEVEL: 'info',
+        API_DATABASE_URL: DB_URL,
+        API_DATABASE_POOL_MAX: 10,
       },
     });
   });
@@ -28,6 +37,7 @@ describe('parseApiEnv', () => {
         { variable: 'APP_ENV', problem: 'is required' },
         { variable: 'API_HOST', problem: 'is required' },
         { variable: 'API_PORT', problem: 'is required' },
+        { variable: 'API_DATABASE_URL', problem: 'is required' },
       ]),
     );
   });
@@ -109,5 +119,45 @@ describe('parseApiEnv', () => {
       if (result.ok) return;
       expect(result.issues.map((i) => i.variable)).toEqual(['API_LOG_LEVEL']);
     });
+  });
+});
+
+describe('database configuration (D-028, D-029)', () => {
+  it.each(['mysql://u:p@h/db', 'not a url', 'postgres://', 'https://db.example'])(
+    'rejects a non-postgres URL without echoing it: %s',
+    (value) => {
+      const result = parseApiEnv({ ...valid, API_DATABASE_URL: value });
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.issues).toEqual([
+        { variable: 'API_DATABASE_URL', problem: 'is invalid (custom)' },
+      ]);
+      expect(JSON.stringify(result)).not.toContain(value === 'postgres://' ? 'postgres://' : value);
+    },
+  );
+
+  it.each(['staging', 'production'])('requires TLS to the database in %s', (appEnv) => {
+    const plain = 'postgres://app_runtime:synthetic@db.internal:5432/platform';
+    for (const url of [plain, `${plain}?sslmode=disable`, `${plain}?sslmode=prefer`]) {
+      const result = parseApiEnv({ ...valid, APP_ENV: appEnv, API_DATABASE_URL: url });
+      expect(result.ok).toBe(false);
+    }
+    for (const mode of ['require', 'verify-ca', 'verify-full']) {
+      const url = `${plain}?sslmode=${mode}`;
+      expect(parseApiEnv({ ...valid, APP_ENV: appEnv, API_DATABASE_URL: url }).ok).toBe(true);
+    }
+  });
+
+  it('allows a local non-TLS database in development and test', () => {
+    const local = 'postgres://app_runtime:synthetic@127.0.0.1:5432/platform';
+    expect(parseApiEnv({ ...valid, APP_ENV: 'development', API_DATABASE_URL: local }).ok).toBe(
+      true,
+    );
+  });
+
+  it('bounds the pool size', () => {
+    expect(parseApiEnv({ ...valid, API_DATABASE_POOL_MAX: '0' }).ok).toBe(false);
+    expect(parseApiEnv({ ...valid, API_DATABASE_POOL_MAX: '101' }).ok).toBe(false);
+    expect(parseApiEnv({ ...valid, API_DATABASE_POOL_MAX: '25' }).ok).toBe(true);
   });
 });

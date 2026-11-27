@@ -6,14 +6,18 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "start": "node --enable-source-maps --env-file-if-exists=.env dist/main.js",
+    "migrate": "node --enable-source-maps dist/migrate-cli.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run --project unit",
+    "test:db": "vitest run --project db"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.0",
     "@nestjs/core": "^12.0.0",
     "@nestjs/platform-express": "^12.0.0",
     "@platform/contracts": "workspace:*",
+    "kysely": "^0.29.9",
+    "pg": "^8.23.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.0",
     "zod": "^4.0.0"
@@ -22,6 +26,7 @@
     "@platform/config": "workspace:*",
     "@types/express": "^5.0.0",
     "@types/node": "^24.0.0",
+    "@types/pg": "^8.23.1",
     "typescript": "~6.0.3",
     "vitest": "^5.0.0"
   }

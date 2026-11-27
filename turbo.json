@@ -18,6 +18,11 @@
       "dependsOn": ["^build"],
       "env": ["APP_ENV"]
     },
+    "test:db": {
+      "dependsOn": ["^build", "build"],
+      "cache": false,
+      "env": ["APP_ENV", "TEST_DATABASE_ADMIN_URL"]
+    },
     "@platform/tests#test": {
       "dependsOn": ["^build"],
       "cache": false,

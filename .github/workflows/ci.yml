@@ -17,6 +17,8 @@ env:
   APP_ENV: test
   TURBO_TELEMETRY_DISABLED: '1'
   COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+  # Throwaway PostgreSQL on the runner (loopback only). SYNTHETIC credentials, not secrets (D-029).
+  TEST_DATABASE_ADMIN_URL: postgres://ci_admin:synthetic-admin-password@127.0.0.1:5432/postgres
 
 jobs:
   verify:
@@ -42,6 +44,13 @@ jobs:
       - name: Install dependencies (frozen lockfile)
         run: pnpm install --frozen-lockfile
 
+      # The runner image ships PostgreSQL, stopped. Real-database isolation tests (Doc 05 §9).
+      - name: Start PostgreSQL
+        run: |
+          sudo systemctl start postgresql.service
+          sudo -u postgres psql -v ON_ERROR_STOP=1 -c "CREATE ROLE ci_admin LOGIN SUPERUSER PASSWORD 'synthetic-admin-password'"
+          psql --version
+
       - name: Format check
         run: pnpm format:check
 
@@ -59,6 +68,12 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      - name: Database integration tests (real PostgreSQL)
+        run: pnpm test:db
+
+      - name: Provision the e2e database
+        run: node apps/api/test/db/provision-cli.ts platform_e2e
 
       - name: Install Playwright Chromium
         run: pnpm --filter @platform/tests exec playwright install --with-deps chromium

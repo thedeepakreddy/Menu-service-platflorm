@@ -4,8 +4,9 @@ import { z } from 'zod';
  * API runtime configuration (decision P-107; security baseline D-019, D-020).
  * Required variables have no defaults. The two optional variables have
  * documented, secure defaults: no cross-origin access, and `info` logging.
- * Secrets management is not decided yet (docs/GAPS.md G-08), so no
- * secret-bearing variables exist.
+ * Secrets (D-029): API_DATABASE_URL carries the runtime role's password. It is
+ * injected at runtime by the platform's secret store, never committed, and
+ * never printed (issues name the variable only).
  */
 export const LOG_LEVELS = ['error', 'warn', 'info', 'debug'] as const;
 export type LogLevelName = (typeof LOG_LEVELS)[number];
@@ -31,6 +32,18 @@ export function isExactOrigin(value: string): boolean {
   return url.origin === value;
 }
 
+/** TLS modes accepted for the database connection in staging and production (D-029). */
+const TLS_SSLMODES = new Set(['require', 'verify-ca', 'verify-full']);
+
+const postgresUrl = z.string().refine((value) => {
+  try {
+    const url = new URL(value);
+    return (url.protocol === 'postgres:' || url.protocol === 'postgresql:') && url.hostname !== '';
+  } catch {
+    return false;
+  }
+}, 'must be a postgres:// URL');
+
 const corsOriginList = z
   .string()
   .transform((raw) =>
@@ -52,6 +65,10 @@ export const apiEnvSchema = z
     API_CORS_ALLOWED_ORIGINS: corsOriginList.default([]),
     /** Optional. Defaults to `info` (D-020). */
     API_LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
+    /** Required. The restricted runtime role's connection string (D-028, D-029). Secret. */
+    API_DATABASE_URL: postgresUrl,
+    /** Optional. Maximum pooled database connections; defaults to 10. */
+    API_DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
   })
   .superRefine((env, ctx) => {
     if (!PRODUCTION_LIKE.has(env.APP_ENV)) return;
@@ -60,6 +77,15 @@ export const apiEnvSchema = z
         code: 'custom',
         path: ['API_CORS_ALLOWED_ORIGINS'],
         message: 'must use https:// origins in staging and production',
+      });
+    }
+    const sslmode = new URL(env.API_DATABASE_URL).searchParams.get('sslmode') ?? '';
+    if (!TLS_SSLMODES.has(sslmode)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['API_DATABASE_URL'],
+        message:
+          'must require TLS (sslmode=require, verify-ca or verify-full) in staging and production',
       });
     }
     if (env.API_LOG_LEVEL === 'debug') {

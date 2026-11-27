@@ -1,12 +1,14 @@
 import 'reflect-metadata';
 
-import { Logger } from '@nestjs/common';
+import { Logger, Module } from '@nestjs/common';
 import type { INestApplication, LoggerService, Type } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 
 import { AllExceptionsFilter } from './all-exceptions.filter.js';
 import { AppModule } from './app.module.js';
+import type { Db } from './infrastructure/database/database.js';
+import { DatabaseModule } from './infrastructure/database/database.module.js';
 import { JsonLogger } from './logging/json-logger.js';
 import { requestLoggingMiddleware } from './logging/request-logging.js';
 import { requestIdMiddleware } from './request-id.js';
@@ -22,13 +24,18 @@ export type CreateAppOptions = {
   corsAllowedOrigins?: readonly string[];
   /** Send HSTS; only for production-like environments that terminate TLS (D-019). */
   hsts?: boolean;
+  /** The runtime-role database (D-028). Absent in tests that need no database. */
+  database?: Db;
 };
 
 export async function createApp(options: CreateAppOptions = {}): Promise<INestApplication> {
   // Configure logging before bootstrap so module-initialisation logs honour it too.
   const logger = options.logger ?? new JsonLogger({ level: 'info' });
   Logger.overrideLogger(logger);
-  const app = await NestFactory.create<NestExpressApplication>(options.rootModule ?? AppModule);
+  const root = options.rootModule ?? AppModule;
+  // The database module is global, so domain modules can inject DATABASE.
+  const entry = options.database === undefined ? root : rootWithDatabase(root, options.database);
+  const app = await NestFactory.create<NestExpressApplication>(entry);
   if (logger !== false) app.useLogger(logger);
   app.disable('x-powered-by');
   app.use(requestIdMiddleware);
@@ -39,4 +46,10 @@ export async function createApp(options: CreateAppOptions = {}): Promise<INestAp
   app.useGlobalFilters(new AllExceptionsFilter());
   app.enableShutdownHooks();
   return app;
+}
+
+function rootWithDatabase(root: Type, db: Db): Type {
+  @Module({ imports: [DatabaseModule.forRoot(db), root] })
+  class RootWithDatabase {}
+  return RootWithDatabase;
 }

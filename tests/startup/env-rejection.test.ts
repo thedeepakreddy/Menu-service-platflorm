@@ -7,6 +7,8 @@ import { describe, expect, it } from 'vitest';
 
 const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
 const SENTINEL = 'sk-live-THIS-MUST-NOT-LEAK';
+// Synthetic; these tests exit during configuration validation, before any connection.
+const DB_URL = 'postgres://app_runtime:synthetic@127.0.0.1:1/platform?sslmode=require';
 
 function runApi(env: Record<string, string>) {
   return spawnSync(process.execPath, ['dist/main.js'], {
@@ -34,24 +36,35 @@ describe('API refuses invalid configuration', () => {
     expect(r.stderr).toContain('APP_ENV is required');
     expect(r.stderr).toContain('API_HOST is required');
     expect(r.stderr).toContain('API_PORT is required');
+    expect(r.stderr).toContain('API_DATABASE_URL is required');
   });
 
   it('exits non-zero on an invalid value without echoing it', () => {
-    const r = runApi({ APP_ENV: SENTINEL, API_HOST: '127.0.0.1', API_PORT: '4000' });
+    const r = runApi({
+      APP_ENV: SENTINEL,
+      API_HOST: '127.0.0.1',
+      API_PORT: '4000',
+      API_DATABASE_URL: DB_URL,
+    });
     expect(r.status).toBe(1);
     expect(r.stderr).toContain('APP_ENV is invalid');
     expect(r.stderr + r.stdout).not.toContain(SENTINEL);
   });
 
   it('exits non-zero on an out-of-range port', () => {
-    const r = runApi({ APP_ENV: 'test', API_HOST: '127.0.0.1', API_PORT: '70000' });
+    const r = runApi({
+      APP_ENV: 'test',
+      API_HOST: '127.0.0.1',
+      API_PORT: '70000',
+      API_DATABASE_URL: DB_URL,
+    });
     expect(r.status).toBe(1);
     expect(r.stderr).toContain('API_PORT is invalid');
   });
 });
 
 describe('API refuses unsafe security configuration (D-019, D-020)', () => {
-  const base = { API_HOST: '127.0.0.1', API_PORT: '4000' };
+  const base = { API_HOST: '127.0.0.1', API_PORT: '4000', API_DATABASE_URL: DB_URL };
   it.each([
     [
       'wildcard CORS origin',
@@ -62,6 +75,14 @@ describe('API refuses unsafe security configuration (D-019, D-020)', () => {
       'http origin in production',
       { APP_ENV: 'production', API_CORS_ALLOWED_ORIGINS: 'http://a.example' },
       'API_CORS_ALLOWED_ORIGINS',
+    ],
+    [
+      'a non-TLS database connection in production',
+      {
+        APP_ENV: 'production',
+        API_DATABASE_URL: 'postgres://app_runtime:synthetic@db.internal/platform',
+      },
+      'API_DATABASE_URL',
     ],
     [
       'debug logging in production',
