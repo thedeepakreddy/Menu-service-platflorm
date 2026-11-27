@@ -1,0 +1,23 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
+      "env": ["APP_ENV"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "env": ["APP_ENV"]
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "env": ["APP_ENV"]
+    },
+    "@platform/tests#test": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "env": ["APP_ENV"]
+    }
+  }
+}

@@ -12,13 +12,13 @@ They are the governing baseline. **Do not edit, replace or reinterpret them.** C
 reconciliations and amendments are recorded in [`DECISIONS.md`](DECISIONS.md) and
 [`GAPS.md`](GAPS.md), never by changing the PDFs.
 
-| Order | Document | File | Version | Pages | Purpose |
-|---|---|---|---|---|---|
-| 01 | Master Product & Engineering Blueprint | [`Master_Product_Engineering_Blueprint_01.pdf`](specifications/Master_Product_Engineering_Blueprint_01.pdf) | 1.0 | 10 | Vision, scope, principles, boundaries, invariants, conceptual roadmap |
-| 02 | Architecture & Technical Specification | [`Architecture_Technical_Specification_02.pdf`](specifications/Architecture_Technical_Specification_02.pdf) | 1.0 | 3 | Architecture baseline, topology, modular monolith, proposed repo structure — **appears incomplete, see [GAPS G-01](GAPS.md)** |
-| 03 | Customer Experience Implementation Specification | [`Customer_Experience_Implementation_Specification_03.pdf`](specifications/Customer_Experience_Implementation_Specification_03.pdf) | 1.0 | 6 | Public customer screens, journeys, states, acceptance |
-| 04 | Business Owner Dashboard Implementation Specification | [`Business_Owner_Dashboard_Implementation_Specification_04.pdf`](specifications/Business_Owner_Dashboard_Implementation_Specification_04.pdf) | 1.0 | 9 | Owner workspace workflows, publishing, acceptance |
-| 05 | Claude Implementation Execution Plan | [`Claude_Implementation_Execution_Plan_05.pdf`](specifications/Claude_Implementation_Execution_Plan_05.pdf) | 1.0 | 7 | Execution protocol, Phase 0–10 roadmap, gates, reporting |
+| Order | Document                                              | File                                                                                                                                          | Version | Pages | Purpose                                                                                                                       |
+| ----- | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ----- | ----------------------------------------------------------------------------------------------------------------------------- |
+| 01    | Master Product & Engineering Blueprint                | [`Master_Product_Engineering_Blueprint_01.pdf`](specifications/Master_Product_Engineering_Blueprint_01.pdf)                                   | 1.0     | 10    | Vision, scope, principles, boundaries, invariants, conceptual roadmap                                                         |
+| 02    | Architecture & Technical Specification                | [`Architecture_Technical_Specification_02.pdf`](specifications/Architecture_Technical_Specification_02.pdf)                                   | 1.0     | 3     | Architecture baseline, topology, modular monolith, proposed repo structure — **appears incomplete, see [GAPS G-01](GAPS.md)** |
+| 03    | Customer Experience Implementation Specification      | [`Customer_Experience_Implementation_Specification_03.pdf`](specifications/Customer_Experience_Implementation_Specification_03.pdf)           | 1.0     | 6     | Public customer screens, journeys, states, acceptance                                                                         |
+| 04    | Business Owner Dashboard Implementation Specification | [`Business_Owner_Dashboard_Implementation_Specification_04.pdf`](specifications/Business_Owner_Dashboard_Implementation_Specification_04.pdf) | 1.0     | 9     | Owner workspace workflows, publishing, acceptance                                                                             |
+| 05    | Claude Implementation Execution Plan                  | [`Claude_Implementation_Execution_Plan_05.pdf`](specifications/Claude_Implementation_Execution_Plan_05.pdf)                                   | 1.0     | 7     | Execution protocol, Phase 0–10 roadmap, gates, reporting                                                                      |
 
 ### Integrity (SHA-256)
 
@@ -53,11 +53,11 @@ Verify with: `cd docs/specifications && sha256sum *.pdf`
 
 ## 3. Working documents
 
-| File | Purpose |
-|---|---|
-| [`DECISIONS.md`](DECISIONS.md) | Central decision log (proposed / approved / superseded …) |
-| [`STATUS.md`](STATUS.md) | Phase status ledger and implementation ledger |
-| [`GAPS.md`](GAPS.md) | Unresolved specification gaps, conflicts and open questions |
+| File                             | Purpose                                                                    |
+| -------------------------------- | -------------------------------------------------------------------------- |
+| [`DECISIONS.md`](DECISIONS.md)   | Central decision log (proposed / approved / superseded …)                  |
+| [`STATUS.md`](STATUS.md)         | Phase status ledger and implementation ledger                              |
+| [`GAPS.md`](GAPS.md)             | Unresolved specification gaps, conflicts and open questions                |
 | [`architecture/`](architecture/) | Architecture notes, phase mapping and future architecture decision records |
 
 ## 4. Status vocabulary

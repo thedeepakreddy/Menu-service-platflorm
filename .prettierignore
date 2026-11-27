@@ -1,0 +1,9 @@
+pnpm-lock.yaml
+dist/
+.next/
+.turbo/
+coverage/
+test-results/
+playwright-report/
+docs/specifications/
+tests/architecture/fixtures/

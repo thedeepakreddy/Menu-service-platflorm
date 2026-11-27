@@ -1,0 +1,5 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "//": "Root alias of the shared strict base; the source of truth is packages/config/tsconfig/base.json.",
+  "extends": "./packages/config/tsconfig/base.json"
+}

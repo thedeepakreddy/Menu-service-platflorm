@@ -1,0 +1,10 @@
+{
+  "extends": "@platform/config/tsconfig/node.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+    "lib": ["ES2023", "DOM"]
+  },
+  "include": ["architecture/**/*.ts", "e2e/**/*.ts", "startup/**/*.ts", "vitest.config.ts"],
+  "exclude": ["architecture/fixtures/**"]
+}

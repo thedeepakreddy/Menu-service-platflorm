@@ -1,0 +1,24 @@
+{
+  "name": "@platform/tests",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Cross-cutting architecture and end-to-end tests.",
+  "scripts": {
+    "test": "vitest run",
+    "arch": "cd .. && depcruise --config tests/architecture/dependency-cruiser.config.cjs --ts-config tsconfig.base.json apps packages tests/architecture tests/e2e",
+    "e2e": "playwright test --config e2e/playwright.config.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@platform/api": "workspace:*",
+    "@platform/config": "workspace:*",
+    "@platform/contracts": "workspace:*",
+    "@platform/web": "workspace:*",
+    "@playwright/test": "1.63.0",
+    "@types/node": "^24.0.0",
+    "dependency-cruiser": "^18.0.0",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.0"
+  }
+}

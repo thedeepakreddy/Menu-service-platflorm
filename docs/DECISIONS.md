@@ -11,11 +11,27 @@ until the owner approves it.
 
 ## Index
 
-| ID | Title | Status | Date |
-|---|---|---|---|
-| [D-001](#d-001) | Document 05 is the authoritative execution roadmap | approved | 2026-11-27 |
-| [D-002](#d-002) | Phase sequencing authority and tracking of discrepancies | approved | 2026-11-27 |
-| [D-003](#d-003) | Specification placement and preservation | approved | 2026-11-27 |
+| ID              | Title                                                         | Status      | Date       |
+| --------------- | ------------------------------------------------------------- | ----------- | ---------- |
+| [D-001](#d-001) | Document 05 is the authoritative execution roadmap            | approved    | 2026-11-27 |
+| [D-002](#d-002) | Phase sequencing authority and tracking of discrepancies      | approved    | 2026-11-27 |
+| [D-003](#d-003) | Specification placement and preservation                      | approved    | 2026-11-27 |
+| [P-101](#p-101) | pnpm workspaces + Turborepo                                   | implemented | 2026-11-27 |
+| [P-102](#p-102) | Node.js 24 LTS, pinned                                        | implemented | 2026-11-27 |
+| [P-103](#p-103) | Strict TypeScript from one shared base                        | implemented | 2026-11-27 |
+| [P-104](#p-104) | ESLint flat config + Prettier; dependency-cruiser boundaries  | implemented | 2026-11-27 |
+| [P-105](#p-105) | Vitest (unit/integration) + Playwright (e2e)                  | implemented | 2026-11-27 |
+| [P-106](#p-106) | GitHub Actions CI                                             | implemented | 2026-11-27 |
+| [P-107](#p-107) | Zod-validated environment, fail fast, `.env.example` only     | implemented | 2026-11-27 |
+| [P-108](#p-108) | Initial API error envelope and request id convention          | implemented | 2026-11-27 |
+| [P-109](#p-109) | Create only `contracts` and `config` packages in Phase 1      | implemented | 2026-11-27 |
+| [P-110](#p-110) | `CLAUDE.md` operational guide                                 | implemented | 2026-11-27 |
+| [D-004](#d-004) | TypeScript pinned to 6.0.x (not 7.x)                          | proposed    | 2026-11-27 |
+| [D-005](#d-005) | 7-day minimum release age for npm packages                    | proposed    | 2026-11-27 |
+| [D-006](#d-006) | `@playwright/test` pinned exactly to 1.63.0                   | proposed    | 2026-11-27 |
+| [D-007](#d-007) | `no-extraneous-class` uses `allowWithDecorator` in `apps/api` | proposed    | 2026-11-27 |
+| [D-008](#d-008) | `APP_ENV` required by every app and by build/typecheck/test   | proposed    | 2026-11-27 |
+| [D-009](#d-009) | Web placeholder is marked `noindex`                           | proposed    | 2026-11-27 |
 
 ---
 
@@ -55,7 +71,7 @@ and others) are tracked explicitly. Implementation follows Document 05's sequenc
 approved change modifies it. A phase's scope is **not** expanded because a conceptual phase in
 another document groups work differently.
 
-**Rationale.** The documents agree on *what* to build but group it differently. Without a rule,
+**Rationale.** The documents agree on _what_ to build but group it differently. Without a rule,
 an agent could justify pulling later-phase work forward by citing a different document.
 
 **Tracking:** Discrepancies are listed as `SEQ-*` items in
@@ -79,3 +95,158 @@ The specifications are never rewritten, replaced, altered or reinterpreted in pl
 **Note.** The upload prefixes (for example `25e01e25-`) were dropped from the filenames when the
 files were stored. The file contents are byte-identical to what the owner supplied, as the
 checksums confirm.
+
+---
+
+## Phase 1 decisions (P-101 – P-110)
+
+**Approval evidence (all ten):** Owner message "accept P-101 through P-110", Phase 1
+authorization, 2026-11-27. P-108 was explicitly accepted as an _initial API convention, not an
+immutable contract_.
+**Status `implemented`** means the decision is in the code on `claude/new-session-7xxuoq` and its
+gates ran locally (see [`STATUS.md`](STATUS.md)). It becomes `verified` when the owner accepts the
+Phase 1 gate.
+
+### P-101
+
+**pnpm workspaces + Turborepo.** `pnpm-workspace.yaml` (`apps/*`, `packages/*`, `tests`) and
+`turbo.json` (`build`, `typecheck`, `test`; `^build` dependencies). pnpm is pinned with
+`packageManager: pnpm@12.22.0` and activated through Corepack.
+_Alternatives:_ npm workspaces (no task graph or caching), Nx (heavier, more lock-in).
+
+### P-102
+
+**Node.js 24 LTS.** `.nvmrc` = `24.22.3`, `engines.node` = `>=24.22.3 <25`. CI reads `.nvmrc`.
+Local verification used Node 24.22.3, installed from nodejs.org with its SHA-256 checked against
+the official `SHASUMS256.txt`. The container's preinstalled Node 22 was not used.
+
+### P-103
+
+**Strict TypeScript.** The single base is `packages/config/tsconfig/base.json` (`strict`,
+`noUncheckedIndexedAccess`, `noImplicitOverride`, `noImplicitReturns`, `noUnused*`,
+`isolatedModules`). Variants: `node.json` (NodeNext ESM) and `nextjs.json` (Bundler). The root
+`tsconfig.base.json` only extends it.
+_Implementation note:_ the base lives inside the package rather than at the root because Vite's
+Oxc transformer resolves `extends` through the workspace symlink, which breaks relative
+`../../../` paths. `skipLibCheck` is on (standard; it does not affect checking of our own code).
+
+### P-104
+
+**ESLint 10 flat config with `typescript-eslint` `strictTypeChecked`** (type-aware), plus
+`consistent-type-imports` and `no-console`. Next.js and React Hooks rules for `apps/web`. Prettier 3. Module boundaries are enforced by dependency-cruiser
+(`tests/architecture/dependency-cruiser.config.cjs`) through both `pnpm arch` (CLI) and a Vitest
+suite that also proves each rule rejects a deliberate violation. See D-007 for the one rule option
+that was changed.
+
+### P-105
+
+**Vitest 5** for unit and API integration tests (a real HTTP server on an ephemeral port).
+**Playwright** for end-to-end smoke tests against the built apps, on desktop and mobile Chromium.
+See D-006 for the version pin.
+
+### P-106
+
+**GitHub Actions** (`.github/workflows/ci.yml`): frozen install → format → lint → typecheck →
+test → arch → build → Playwright e2e. `permissions: contents: read`; checkout without persisted
+credentials. Actions are pinned to full commit SHAs (checkout v6.1.0, setup-node v6.5.0,
+upload-artifact v6.0.0), resolved from the official repositories with `git ls-remote`.
+
+### P-107
+
+**Environment validation.** `apps/api/src/env.ts` and `apps/web/src/env.ts` (Zod). The API
+validates in `main.ts` before bootstrap; the web app validates in `next.config.ts`, so `next dev`,
+`build`, `start` and `typegen` all refuse invalid configuration. Errors name the variable, never the
+value. No defaults. Only `.env.example` files are committed. Secrets management remains open
+([G-08](GAPS.md)).
+
+### P-108
+
+**Initial API error convention** (`packages/contracts/src/errors.ts`): the envelope
+`{ error: { code, message, requestId } }`, a fixed initial code list, and the `x-request-id`
+header. A client-supplied id is kept only if it matches `^[A-Za-z0-9_-]{8,128}$`; otherwise a UUID
+is generated. Clients get generic messages. 5xx details are logged server-side with the request id.
+The full endpoint inventory, versioning and error taxonomy remain open ([G-14](GAPS.md)).
+
+### P-109
+
+**Packages created in Phase 1:** `packages/contracts` and `packages/config` only. `packages/ui`,
+`packages/test-utils`, `services/` and `infra/` from Doc 02 §4 are **deferred** until a phase needs
+them. This is a recorded, approved deviation from Doc 02's _proposed_ structure. Cross-cutting tests
+live in a `tests/` workspace package (`architecture/`, `startup/`, `e2e/`).
+
+### P-110
+
+**`CLAUDE.md`** is an operational guide: how to start work, toolchain, commands, layout, boundary
+rules and conventions. It defers to `docs/` and states that `docs/` wins on any conflict.
+
+---
+
+## Implementation-time decisions awaiting approval
+
+These came up while implementing the approved Phase 1 plan. Each is in effect in the code, but
+stays `proposed` until the owner accepts or changes it.
+
+## D-004
+
+**Title:** TypeScript pinned to 6.0.x (not 7.x)
+**Status:** proposed
+**Decision.** Use `typescript ~6.0.3`.
+**Rationale.** TypeScript 7.0 is the latest release, but `typescript-eslint` 8.x (required for
+type-aware linting, P-104) declares `typescript >=4.8.4 <6.1.0`. Moving to 7.x would mean dropping
+type-aware linting, which would weaken P-104.
+**Revisit when** `typescript-eslint` supports TypeScript 7 ([G-29](GAPS.md)).
+
+## D-005
+
+**Title:** 7-day minimum release age for npm packages
+**Status:** proposed
+**Decision.** `minimumReleaseAge: 10080` (minutes) in `pnpm-workspace.yaml`. pnpm will not resolve
+any package version published less than 7 days ago.
+**Rationale.** Supply-chain protection against freshly published compromised versions. It is
+already effective: for example, NestJS resolved to 12.5.1 rather than 12.6.3, which was published
+the day of installation.
+**Note.** This was not in the approved Phase 1 plan. It is a small security-foundation addition,
+disclosed here for approval. The trade-off is that urgent security patches need a deliberate
+override.
+
+## D-006
+
+**Title:** `@playwright/test` pinned exactly to 1.63.0
+**Status:** proposed
+**Rationale.** The development container ships Chromium builds for Playwright 1.63.0. Pinning the
+same version means local and CI e2e runs use the same browser revision (CI installs it with
+`playwright install --with-deps chromium`). The latest release at implementation time was 1.65.1.
+**Revisit** at Phase 10 or when the container's browsers are updated.
+
+## D-007
+
+**Title:** `@typescript-eslint/no-extraneous-class` uses its `allowWithDecorator` option in `apps/api`
+**Status:** proposed
+**Decision.** In `apps/api/**`, the rule stays at `error` with `{ allowWithDecorator: true }`.
+**Rationale.** NestJS modules are, by framework design, empty decorated classes
+(`@Module({...}) export class X {}`). The option exempts only decorated classes; undecorated
+extraneous classes are still reported.
+**Disclosure.** This is the only lint relaxation in the repository. During implementation, broader
+relaxations were tried and then removed in favour of code fixes: turning this rule off, turning off
+`no-unsafe-class-instance-assignment`, a `no-console` override, `allowNumber` and
+`argsIgnorePattern`. The owner may reject this option. The alternative is an inline justification
+per module or a different module pattern.
+
+## D-008
+
+**Title:** `APP_ENV` is required by every app and by build/typecheck/test commands
+**Status:** proposed
+**Decision.** `APP_ENV ∈ {development, test, staging, production}` is required, with no default.
+Because the web app validates in `next.config.ts`, any command that loads the Next.js config needs
+it (`next build`, `next typegen` inside `typecheck`, and the startup tests). Turborepo tasks declare
+it in `env` so it is passed through and included in cache keys. CI sets `APP_ENV=test`.
+**Trade-off.** It is explicit and fails fast, but developers must export `APP_ENV` locally (this is
+documented in `CLAUDE.md` and `README.md`).
+
+## D-009
+
+**Title:** Web placeholder is marked `noindex`
+**Status:** proposed
+**Decision.** The root layout sets `robots: { index: false, follow: false }`.
+**Rationale.** Keeps the Phase 1 placeholder out of search indexes if it is ever deployed. Real SEO
+and robots policy belong to the customer platform phases (Doc 03 §18). Remove or replace this then.

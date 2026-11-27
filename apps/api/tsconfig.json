@@ -1,0 +1,10 @@
+{
+  "extends": "@platform/config/tsconfig/node.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  },
+  "include": ["src", "vitest.config.ts"]
+}
