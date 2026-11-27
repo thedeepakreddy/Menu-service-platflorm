@@ -249,6 +249,28 @@ describe('architecture CLI scope (audit N-02)', () => {
     expect(ci).toMatch(/^\s+run: pnpm arch\s*$/m);
   });
 
+  // Audit F-10: a gate that is run but whose failure is swallowed is not a gate.
+  it('every required gate runs in CI and no CI step can swallow a failure', () => {
+    const ci = readFileSync(`${repoRoot}.github/workflows/ci.yml`, 'utf8');
+    for (const gate of [
+      'pnpm install --frozen-lockfile',
+      'pnpm format:check',
+      'pnpm lint',
+      'pnpm typecheck',
+      'pnpm test',
+      'pnpm arch',
+      'pnpm build',
+      'pnpm test:e2e',
+    ]) {
+      expect(ci).toMatch(
+        new RegExp(`^\\s+run: ${gate.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'm'),
+      );
+    }
+    expect(ci).not.toMatch(/continue-on-error/);
+    expect(ci).not.toMatch(/\|\|\s*(true|:|exit 0)/);
+    expect(ci).not.toMatch(/^\s+if:\s*(false|always\(\))/m);
+  });
+
   /** Splits a regex source on `|` at group depth 0, honouring escapes and character classes. */
   function topLevelAlternatives(source: string): string[] {
     const parts: string[] = [];
