@@ -1,4 +1,4 @@
-import { readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
@@ -118,12 +118,20 @@ const EXPECTED: Record<string, string[]> = {
     'apps/api/src/type-query.ts',
     'apps/api/src/uses-spec.ts',
     'apps/api/src/uses-tests-dir.ts',
+    // N-01: test-tooling config is exempt from the devDependency rule, so it is not importable.
+    'apps/api/src/uses-tooling-config.ts',
     'apps/api/src/value.ts',
     'apps/web/src/component.tsx',
     'packages/contracts/src/laundered.ts',
   ],
   'not-to-unresolvable': ['packages/shared/src/unresolvable.ts'],
-  'no-dev-deps-in-production-code': ['apps/api/src/dynamic-dev.ts', 'apps/api/src/uses-dev.ts'],
+  'no-dev-deps-in-production-code': [
+    'apps/api/src/dynamic-dev.ts',
+    'apps/api/src/uses-dev.ts',
+    // N-01: runtime files outside src/, including runtime config.
+    'apps/web/lib/helper.ts',
+    'apps/web/next.config.ts',
+  ],
 };
 
 describe('rule inventory', () => {
@@ -169,11 +177,106 @@ describe('valid architecture fixture', () => {
         'apps/api/src/modules/alpha/alpha.service.ts',
         'packages/contracts/src/schema.ts',
         'apps/web/src/page.ts',
+        // N-01 positive cases: tooling config may use devDependencies; lib/ may use dependencies.
+        'apps/api/vitest.config.ts',
+        'apps/web/lib/util.ts',
       ]),
     );
     const deps = result.modules.flatMap((m) => m.dependencies);
     expect(deps.length).toBeGreaterThanOrEqual(9);
     expect(deps.filter((d) => d.couldNotResolve)).toEqual([]);
+  });
+});
+
+describe('architecture CLI scope (audit N-02)', () => {
+  /** Positional (scan-target) arguments of the depcruise invocation in a script. */
+  function depcruiseTargets(script: string): string[] {
+    const tokens = script
+      .slice(script.indexOf('depcruise') + 'depcruise'.length)
+      .trim()
+      .split(/\s+/);
+    const targets: string[] = [];
+    for (let i = 0; i < tokens.length; i += 1) {
+      const token = tokens[i] ?? '';
+      if (token === '&&' || token === ';') break;
+      if (token.startsWith('--')) {
+        // --flag value, unless written as --flag=value.
+        if (!token.includes('=')) i += 1;
+        continue;
+      }
+      targets.push(token.replace(/\/+$/, ''));
+    }
+    return targets;
+  }
+
+  const pkg = JSON.parse(readFileSync(`${repoRoot}tests/package.json`, 'utf8')) as {
+    scripts: Record<string, string>;
+  };
+  const archScript = pkg.scripts.arch ?? '';
+
+  it('`pnpm arch` scans exactly the directories the real-tree tests scan', () => {
+    expect(archScript).toContain('depcruise');
+    expect(archScript).toContain('--config tests/architecture/dependency-cruiser.config.cjs');
+    expect([...depcruiseTargets(archScript)].sort()).toEqual([...REPO_PATHS].sort());
+  });
+
+  it('the scan scope covers every workspace root declared in pnpm-workspace.yaml', () => {
+    const workspace = readFileSync(`${repoRoot}pnpm-workspace.yaml`, 'utf8');
+    const roots = [...workspace.matchAll(/^\s+-\s+['"]?([^/'"*\s]+)/gm)].map((m) => m[1]);
+    expect(roots.length).toBeGreaterThan(0);
+    for (const root of roots) expect(REPO_PATHS).toContain(root);
+  });
+
+  it('CI runs the architecture CLI', () => {
+    const ci = readFileSync(`${repoRoot}.github/workflows/ci.yml`, 'utf8');
+    expect(ci).toMatch(/^\s+run: pnpm arch\s*$/m);
+  });
+
+  /** Splits a regex source on `|` at group depth 0, honouring escapes and character classes. */
+  function topLevelAlternatives(source: string): string[] {
+    const parts: string[] = [];
+    let depth = 0;
+    let inClass = false;
+    let current = '';
+    for (let i = 0; i < source.length; i += 1) {
+      const ch = source.charAt(i);
+      if (ch === '\\') {
+        current += ch + source.charAt(i + 1);
+        i += 1;
+        continue;
+      }
+      if (inClass) {
+        if (ch === ']') inClass = false;
+      } else if (ch === '[') inClass = true;
+      else if (ch === '(') depth += 1;
+      else if (ch === ')') depth -= 1;
+      else if (ch === '|' && depth === 0) {
+        parts.push(current);
+        current = '';
+        continue;
+      }
+      current += ch;
+    }
+    parts.push(current);
+    return parts;
+  }
+
+  it('the alternative splitter is not vacuous', () => {
+    expect(topLevelAlternatives('^a/(b|c)/|^d[|]e|x\\|y|node_modules/')).toEqual([
+      '^a/(b|c)/',
+      '^d[|]e',
+      'x\\|y',
+      'node_modules/',
+    ]);
+  });
+
+  it('every configured exclusion is anchored to a workspace path (H-01)', () => {
+    const exclude = config.options?.exclude;
+    const pattern = typeof exclude === 'object' && !Array.isArray(exclude) ? exclude.path : exclude;
+    expect(typeof pattern).toBe('string');
+    const alternatives = topLevelAlternatives(String(pattern));
+    expect(alternatives.length).toBeGreaterThan(0);
+    expect(alternatives.filter((alternative) => !alternative.startsWith('^'))).toEqual([]);
   });
 });
 

@@ -15,6 +15,14 @@ const WORKSPACE_BUILD_OUTPUT = '^(apps|packages)/[^/]+/(dist|\\.next)/';
  */
 const TEST_FILE = '(\\.(test|spec)\\.[cm]?[jt]sx?$)|(/__tests__/)';
 
+/**
+ * Test-tooling configuration: the only non-test files allowed to import
+ * devDependencies (they import `vitest`). Runtime configuration such as
+ * `next.config.ts`, which `next start` loads, is deliberately NOT included
+ * (audit N-01, D-021).
+ */
+const TOOLING_CONFIG = '^(apps|packages)/[^/]+/vitest\\.config\\.[cm]?[jt]s$';
+
 /** Database clients and ORMs the web app must never import (M-03, D-012). */
 const DB_CLIENTS = [
   '@prisma/client',
@@ -94,8 +102,10 @@ module.exports = {
         'into files its tsconfig excludes, so such an import would launder forbidden ' +
         'dependencies into production output (audit R-01, D-016). Test files may import ' +
         'other test files.',
-      from: { path: '^(apps|packages)/', pathNot: TEST_FILE },
-      to: { path: TEST_FILE },
+      from: { path: '^(apps|packages)/', pathNot: [TEST_FILE, TOOLING_CONFIG] },
+      // Test-tooling config is exempt from the devDependency rule, so it must
+      // not be importable by runtime code either (N-01).
+      to: { path: [TEST_FILE, TOOLING_CONFIG] },
     },
     {
       name: 'production-code-must-not-import-tests',
@@ -156,10 +166,13 @@ module.exports = {
     {
       name: 'no-dev-deps-in-production-code',
       severity: 'error',
-      comment: 'Runtime code must not depend on devDependencies (type-only imports are allowed).',
+      comment:
+        'No workspace file other than tests and test-tooling config may depend on ' +
+        'devDependencies, wherever it lives (src/, lib/, root config such as next.config.ts). ' +
+        'Type-only imports are allowed (audit N-01, D-021).',
       from: {
-        path: '^(apps|packages)/[^/]+/src/',
-        pathNot: '\\.test\\.tsx?$',
+        path: '^(apps|packages)/[^/]+/',
+        pathNot: ['\\.test\\.tsx?$', TOOLING_CONFIG],
       },
       to: { dependencyTypes: ['npm-dev'], dependencyTypesNot: ['type-only'] },
     },
