@@ -46,6 +46,14 @@ until the owner approves it.
 | [D-021](#d-021) | devDependency rule covers all workspace files (N-01); CLI scan-scope guard (N-02) | approved — amended for F-02, F-10       | 2026-11-27 |
 | [D-022](#d-022) | Doc 05 Phase 1 exit-gate conflict (§11 vs §13): interpretation                    | approved (owner amendment)              | 2026-11-27 |
 | [D-023](#d-023) | Commit author identity policy (I-03)                                              | approved (2026-11-27)                   | 2026-11-27 |
+| [D-024](#d-024) | G-03: Kysely on node-postgres; plain-SQL forward-only migrations                  | approved (delegated, Part IX)           | 2026-11-27 |
+| [D-025](#d-025) | G-04: OIDC identity architecture behind a provider port                           | architecture approved; **vendor open**  | 2026-11-27 |
+| [D-026](#d-026) | G-05: account recovery delegated to the identity provider                         | approved (delegated, Part IX)           | 2026-11-27 |
+| [D-027](#d-027) | G-06: tenant resolution and server-side tenant context                            | approved (delegated, Part IX)           | 2026-11-27 |
+| [D-028](#d-028) | G-07: PostgreSQL RLS isolation model, roles and operator access                   | approved (delegated, Part IX)           | 2026-11-27 |
+| [D-029](#d-029) | G-08: runtime secrets management                                                  | approved (delegated, Part IX)           | 2026-11-27 |
+| [D-030](#d-030) | G-36: sessions via a server-side web BFF; CORS stays credential-free              | approved (delegated, Part IX)           | 2026-11-27 |
+| [D-031](#d-031) | G-34/G-38: rate limiting and request-cost controls                                | approved (delegated, Part IX)           | 2026-11-27 |
 
 ---
 
@@ -707,3 +715,202 @@ commit author identity policy. Do not rewrite historical commits."
 **Alternative considered.** Author = owner, committer = agent. Rejected as the default because it
 records the owner as having authored code they did not write; the owner can switch to it by
 configuring `user.name`/`user.email` for future sessions and recording a superseding decision.
+
+---
+
+## Phase 2 entry decisions (D-024 – D-031)
+
+**Authorization evidence:** Owner message "MASTER EXECUTION PROMPT — PHASE 1 REMEDIATION, FORMAL
+CLOSURE & PHASE 2 IMPLEMENTATION" (2026-11-27), Part IX: resolve G-03 – G-08, G-36 and G-34/G-38
+before Phase 2 implementation, evidence-driven, through bounded spikes where possible; Part XII:
+ask the owner only for decisions that are outside the authorized scope, change the product,
+introduce **a materially new vendor commitment**, or create irreversible external consequences.
+Phase 1 was closed first (STATUS.md → "Phase 1 formal closure"). These decisions were taken by
+the implementation agent under that delegation; each states its evidence. Any of them can be
+superseded by the owner through a new entry.
+
+## D-024
+
+**Title:** G-03 — data access: Kysely on node-postgres; plain-SQL forward-only migrations
+**Status:** approved (delegated, Part IX), 2026-11-27
+**Evidence:** [`architecture/spikes/g03-g07-postgres-rls-spike.md`](architecture/spikes/g03-g07-postgres-rls-spike.md)
+(real PostgreSQL 16, 90/90 PASS, re-run independently).
+**Decision.**
+
+- Runtime data access uses **Kysely** (`kysely`, MIT) over **node-postgres** (`pg`, MIT) with a
+  `pg.Pool`. Kysely is a typed SQL builder with no engine and no hidden queries; raw SQL remains
+  first-class (Doc 01 §9).
+- Schema changes are **plain `.sql` files**, forward-only, applied in order by a small migration
+  runner in `apps/api` (checksummed, one transaction per file, advisory-locked) as the migration
+  role `app_owner`. RLS policies, `FORCE`, grants and functions are ordinary SQL in those files,
+  so nothing in the toolchain can hide or silently drop them. A rollback is a new forward
+  migration, or a restore (Doc 05 §8 backup/rollback strategy, G-10).
+- Every tenant-scoped query runs through a single `withTenant()` helper; no other code may open
+  a transaction or set the tenant setting (D-028).
+
+**Prisma (the Doc 01 §9 "proposed baseline") was evaluated and not selected.** It passed the
+runtime isolation checks inside interactive transactions, but RLS policies exist only as raw SQL
+outside its schema model, its drift detection ignores them (a dropped policy goes unnoticed), its
+introspection reports RLS as "not yet fully supported", `migrate dev` needs a shadow database,
+and a bare (non-transactional) call silently returns no rows. For a platform whose primary
+security property is database-enforced isolation, keeping policies first-class outweighs Prisma's
+schema-first workflow. Doc 01 §9 calls Prisma "proposed … subject to architecture
+specification", so this is a recorded architecture decision, not a deviation from a requirement.
+**Dependency review (Doc 05 §8):** kysely 0.29.9, pg 8.23.1, @types/pg 8.23.1 — MIT, older than
+7 days (D-005), no install scripts required.
+
+## D-025
+
+**Title:** G-04 — identity: OpenID Connect architecture behind a provider port
+**Status:** architecture **approved** (delegated, Part IX); **identity-provider vendor: OPEN —
+owner decision required** (materially new vendor commitment, Part XII)
+**Decision (architecture).**
+
+- Owners and platform operators authenticate with an external **OpenID Connect** provider using
+  the authorization-code flow with PKCE. The platform never stores or verifies passwords and
+  never builds its own credential system (no compelling reason to; it would add password
+  storage, breach exposure and recovery handling).
+- The API is a resource server: it accepts `Authorization: Bearer <JWT>` and verifies signature
+  (JWKS, asymmetric algorithms only: RS256/ES256; `none` and HS* rejected), `iss`, `aud`, `exp`,
+  `nbf` and a small clock skew. Library: `jose` (MIT), no vendor SDK.
+- **Owners and operators are separate trust domains**: different issuer (realm/tenant) or at least
+  different client/audience, configured separately. An owner token is never accepted on operator
+  routes and vice versa. Operator tokens must show multi-factor authentication (`amr`/`acr`
+  claims); owner MFA is strongly recommended and becomes required when the vendor supports it.
+- Identity is mapped to a platform account by `(issuer, subject)`; e-mail is not an identifier.
+  Membership and permissions are platform data (D-027), never token claims alone.
+- Logout and session lifetime are handled by the web BFF (D-030); the API is stateless per
+  request.
+- An `IdentityVerifier` port isolates the provider. Tests use a local test issuer (generated keys,
+  synthetic claims), so Phase 2 can be built and verified without a vendor account.
+
+**Open: the vendor.** Candidates meeting the architecture: managed OIDC services (for example
+Auth0/Okta, Microsoft Entra External ID, AWS Cognito, Google Identity Platform) or self-hosted
+(Keycloak, Zitadel). Choosing one is a cost, data-residency, contract and exit-strategy commitment
+for the owner. Until chosen, no vendor is integrated and no production login exists.
+
+## D-026
+
+**Title:** G-05 — account recovery is delegated to the identity provider
+**Status:** approved (delegated, Part IX), 2026-11-27
+**Decision.** Recovery (password reset, MFA reset) is performed by the identity provider through a
+**verified e-mail** flow; SMS-only recovery is not allowed. Recovery links must be single-use and
+short-lived (provider configuration, checked when the vendor is chosen). Operator MFA reset
+requires a second operator and is audited. Platform-side: recovery and login endpoints the
+platform itself exposes are rate-limited (D-031), responses do not reveal whether an account
+exists, and recovery events received from the provider are logged without secrets (D-020).
+**Depends on:** the D-025 vendor choice for its concrete configuration.
+
+## D-027
+
+**Title:** G-06 — tenant resolution and server-side tenant context
+**Status:** approved (delegated, Part IX), 2026-11-27
+**Decision.**
+
+- **Public traffic (MVP): path-based tenant URLs** with a validated slug
+  (`^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])$`, reserved words refused). Doc 03 §18 allows paths and
+  subdomains, with verified custom domains later (G-21). Paths need no wildcard DNS or
+  certificates, keep HSTS `includeSubDomains` possible later, and keep one cookie origin.
+- The server resolves the slug to an **active** tenant; unknown, suspended or retired tenants get
+  the same tenant-safe "not found" (Doc 03 §3, §20). Internal tenant ids never appear in public
+  URLs (Doc 03 §18).
+- **Owner traffic: tenant from verified membership, never from the URL alone.** An owner request
+  names a tenant; the server checks an active membership of the authenticated account in that
+  tenant before any tenant data is read (Doc 04 §3).
+- The resolved tenant is an immutable server-side value passed explicitly into `withTenant()`
+  (D-028). It is never read back from client input after resolution.
+- **Background jobs** carry the tenant id in their payload and open their own `withTenant()`
+  transaction; a job without a tenant is refused. **Cache keys** must include the tenant id
+  (Doc 03 §17); there is no cache in Phase 2.
+- Membership model: an account may hold memberships in several tenants; Phase 2 has one role,
+  `owner` (Doc 01 §5: one owner account per business; no staff roles).
+
+## D-028
+
+**Title:** G-07 — PostgreSQL row-level security isolation model, roles and operator access
+**Status:** approved (delegated, Part IX), 2026-11-27
+**Evidence:** spike (D-024), re-proved by `pnpm test:db` in the repository.
+**Decision.**
+
+- **Shared database, shared schema** (`app`), `tenant_id uuid not null` on every tenant-owned
+  table (Doc 01 §10 "shared relational database … tenant-aware schema … RLS"). This settles the
+  S-02 row 9 PROPOSED model.
+- **Roles:** `app_owner` owns schema and tables and is used only by migrations; `app_runtime`
+  (LOGIN, NOSUPERUSER, NOBYPASSRLS, NOINHERIT, not an owner, DML grants only, no TEMP/CREATE) is
+  the only role the API uses; `app_operator` (NOBYPASSRLS) is the platform-operator path. No
+  application role is a superuser or has BYPASSRLS.
+- **Every tenant-owned table:** `ENABLE` and `FORCE ROW LEVEL SECURITY`; policy USING and WITH
+  CHECK `tenant_id = app.current_tenant_id()` in the InitPlan-friendly form; an index on
+  `tenant_id`. A database test asserts that every table with a `tenant_id` column has RLS,
+  `FORCE` and a policy, so a forgotten policy fails CI.
+- **Tenant context:** `set_config('app.tenant_id', <validated uuid>, true)` inside the
+  transaction opened by `withTenant()`, once, as the first statement. Session-level `SET` and
+  `set_config(..., false)` are forbidden (checked by a test that scans the API source). Missing,
+  empty or malformed context fails closed.
+- **Operator access** (Doc 01 §6, Doc 04 §3): no BYPASSRLS role. Cross-tenant operator actions go
+  through `SECURITY DEFINER` functions owned by `app_owner`, executable only by `app_operator`,
+  each taking an operator id and a reason and writing an audit record (Phase 2: tenant
+  provisioning and lifecycle). Because an in-database audit row rolls back with its transaction,
+  the API also emits a structured log entry before the call; the shipped log is the trail of
+  record (G-32).
+- **Tests:** negative isolation tests against real PostgreSQL in CI (Doc 05 §9), including pool
+  reuse, concurrency and missing context.
+
+## D-029
+
+**Title:** G-08 — runtime secrets management
+**Status:** approved (delegated, Part IX), 2026-11-27
+**Decision.**
+
+- Secrets (database passwords, identity-provider client secrets) are **injected at runtime as
+  environment variables** by the deployment platform's secret store (concrete store chosen with
+  G-09). They are never committed, never baked into an image, never in `.env.example` with real
+  values, and never logged: the env schema reports names only (P-107) and redaction covers URL
+  credentials (D-020).
+- **Separate credentials per role.** The API runtime receives only the `app_runtime` connection
+  string (`API_DATABASE_URL`). The migration job alone receives the `app_owner` connection string
+  (`MIGRATION_DATABASE_URL`). The API process never holds migration credentials.
+- **CI** uses synthetic, job-local credentials for a throwaway database; no real secrets exist
+  in CI. GitHub environment secrets are reserved for future deployment jobs (Phase 10).
+- **Local development** uses a gitignored `.env` with synthetic values.
+- **Rotation:** credentials are rotatable without code changes (restart with new values);
+  database roles support dual-password rotation by role recreation. The rotation runbook is part
+  of Phase 10 with G-09/G-10.
+
+## D-030
+
+**Title:** G-36 — sessions through a server-side web BFF; API CORS stays credential-free
+**Status:** approved (delegated, Part IX), 2026-11-27
+**Decision.**
+
+- The browser never holds identity tokens. The Next.js server (`apps/web`) acts as a
+  backend-for-frontend: it runs the OIDC code flow, keeps the session server-side in an
+  encrypted, `HttpOnly`, `Secure`, `SameSite=Lax`, host-only cookie, and calls the API
+  server-to-server with the bearer token.
+- Therefore the API keeps **`credentials: false` CORS** (D-019); no credentialed cross-origin
+  browser request is ever needed. Production CORS origins stay empty unless a browser must call
+  the API directly.
+- **CSRF:** state-changing BFF routes require `SameSite=Lax` plus an `Origin`/`Host` check
+  (and a CSRF token if a non-GET form is ever cross-site reachable). Logout clears the cookie and
+  ends the provider session (RP-initiated logout).
+- The BFF login flow is built when an owner-facing route first needs it; until the D-025 vendor is
+  chosen, the API's token verification is tested against a local test issuer.
+
+## D-031
+
+**Title:** G-34/G-38 — rate limiting and request-cost controls
+**Status:** approved (delegated, Part IX), 2026-11-27
+**Decision.**
+
+- **Bounded processing first** (audit F-01): body limit 100 KB, Node's 16 KB header limit, bounded
+  logging, and no unbounded work per request.
+- **Application rate limiting in-process** (fixed-window counters with a bounded key table) for
+  authentication-relevant and tenant-resolution endpoints, keyed by route plus client address and,
+  where present, account; responses are `429 TOO_MANY_REQUESTS` in the error envelope with
+  `Retry-After`. No Redis: Doc 01 §9 introduces it only when justified.
+- **Multi-instance limitation (recorded):** in-process limits are per instance. Before running
+  more than one API instance, either an edge/load-balancer limit or a shared store is added
+  (Phase 10, with G-09). The client address used for keys comes from the socket unless a trusted
+  proxy is explicitly configured; `X-Forwarded-For` is not trusted by default.
+- Credential-guessing protection for login itself is the identity provider's responsibility
+  (D-025, D-026).
