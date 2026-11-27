@@ -138,3 +138,19 @@ export function bffHeaders(session?: string, extra: Record<string, string> = {})
     ...extra,
   };
 }
+
+/** A port that is free right now (bound and released), instead of a random guess. */
+export async function freePort(): Promise<string> {
+  const { createServer } = await import('node:net');
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address();
+      const port = typeof address === 'object' && address !== null ? address.port : 0;
+      server.close(() => {
+        resolve(String(port));
+      });
+    });
+  });
+}

@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, inject, it } from 'vitest';
 
+import { freePort } from '../test/db/fixtures.js';
+
 const apiRoot = fileURLToPath(new URL('../', import.meta.url));
 const { ownerUrl, runtimeUrl, operatorUrl } = inject('database');
 
@@ -14,42 +16,44 @@ function startApi(
   databaseUrl: string,
   operatorDatabaseUrl?: string,
 ): Promise<number | 'listening'> {
-  return new Promise((resolve) => {
-    const port = String(20_000 + Math.floor(Math.random() * 20_000));
-    const child = spawn(process.execPath, ['dist/main.js'], {
-      cwd: apiRoot,
-      env: {
-        PATH: process.env.PATH ?? '',
-        APP_ENV: 'test',
-        API_HOST: '127.0.0.1',
-        API_PORT: port,
-        API_DATABASE_URL: databaseUrl,
-        ...(operatorDatabaseUrl === undefined
-          ? {}
-          : { API_OPERATOR_DATABASE_URL: operatorDatabaseUrl }),
-        API_LOG_LEVEL: 'error',
-      },
-      stdio: ['ignore', 'ignore', 'pipe'],
-    });
-    let stderr = '';
-    child.stderr.on('data', (chunk: Buffer) => (stderr += chunk.toString()));
-    const timer = setInterval(() => {
-      fetch(`http://127.0.0.1:${port}/health`)
-        .then((res) => {
-          if (res.ok) {
-            clearInterval(timer);
-            child.kill('SIGTERM');
-            resolve('listening');
-          }
-        })
-        .catch(() => undefined);
-    }, 200);
-    child.on('exit', (code) => {
-      clearInterval(timer);
-      lastStderr = stderr;
-      resolve(code ?? -1);
-    });
-  });
+  return freePort().then(
+    (port) =>
+      new Promise((resolve) => {
+        const child = spawn(process.execPath, ['dist/main.js'], {
+          cwd: apiRoot,
+          env: {
+            PATH: process.env.PATH ?? '',
+            APP_ENV: 'test',
+            API_HOST: '127.0.0.1',
+            API_PORT: port,
+            API_DATABASE_URL: databaseUrl,
+            ...(operatorDatabaseUrl === undefined
+              ? {}
+              : { API_OPERATOR_DATABASE_URL: operatorDatabaseUrl }),
+            API_LOG_LEVEL: 'error',
+          },
+          stdio: ['ignore', 'ignore', 'pipe'],
+        });
+        let stderr = '';
+        child.stderr.on('data', (chunk: Buffer) => (stderr += chunk.toString()));
+        const timer = setInterval(() => {
+          fetch(`http://127.0.0.1:${port}/health`)
+            .then((res) => {
+              if (res.ok) {
+                clearInterval(timer);
+                child.kill('SIGTERM');
+                resolve('listening');
+              }
+            })
+            .catch(() => undefined);
+        }, 200);
+        child.on('exit', (code) => {
+          clearInterval(timer);
+          lastStderr = stderr;
+          resolve(code ?? -1);
+        });
+      }),
+  );
 }
 let lastStderr = '';
 
@@ -83,6 +87,11 @@ describe('API startup database role check (D-028, D-035)', () => {
   });
 
   it('starts with the runtime and operator roles', async () => {
-    expect(await startApi(runtimeUrl, operatorUrl)).toBe('listening');
+    const result = await startApi(runtimeUrl, operatorUrl);
+    // On failure, show why (names problems only, never values).
+    expect({ result, stderr: result === 'listening' ? '' : lastStderr }).toEqual({
+      result: 'listening',
+      stderr: '',
+    });
   });
 });

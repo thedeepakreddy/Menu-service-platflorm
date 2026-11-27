@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { sql } from 'kysely';
 import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
 
-import { adminQuery, seedTenant } from '../test/db/fixtures.js';
+import { adminQuery, freePort, seedTenant } from '../test/db/fixtures.js';
 import {
   createDatabase,
   isDatabaseUnavailable,
@@ -68,7 +68,7 @@ describe('in-process pool (B-01)', () => {
           await new Promise((r) => setTimeout(r, 300));
           await killBackends('app_runtime');
           const failure = await pending;
-          if (failure !== undefined) throw failure;
+          if (failure instanceof Error) throw failure;
         }
         return (await sql<{ ok: number }>`SELECT 1 AS ok`.execute(db)).rows[0]?.ok;
       });
@@ -98,7 +98,7 @@ describe('the built API process (B-01)', () => {
 
   beforeAll(async () => {
     tenantSlug = (await seedTenant(adminUrl)).slug;
-    const port = String(20_000 + Math.floor(Math.random() * 20_000));
+    const port = await freePort();
     base = `http://127.0.0.1:${port}`;
     child = spawn(process.execPath, ['dist/main.js'], {
       cwd: apiRoot,
@@ -158,7 +158,7 @@ describe('the built API process (B-01)', () => {
 
 describe('readiness while the database is unreachable', () => {
   it('reports 503 on /health/ready and 503 envelopes, while /health stays 200', async () => {
-    const port = String(20_000 + Math.floor(Math.random() * 20_000));
+    const port = await freePort();
     const closed = new URL(runtimeUrl);
     closed.port = '1'; // nothing listens there
     // The startup check needs a database, so use the in-process app factory instead.
