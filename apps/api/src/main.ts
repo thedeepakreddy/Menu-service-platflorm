@@ -1,5 +1,6 @@
 import { createApp } from './create-app.js';
-import { parseApiEnv } from './env.js';
+import { parseApiEnv, PRODUCTION_LIKE } from './env.js';
+import { JsonLogger } from './logging/json-logger.js';
 
 async function main(): Promise<void> {
   const parsed = parseApiEnv(process.env);
@@ -10,8 +11,12 @@ async function main(): Promise<void> {
     process.exitCode = 1;
     return;
   }
-  const { API_HOST, API_PORT } = parsed.env;
-  const app = await createApp();
+  const { APP_ENV, API_HOST, API_PORT, API_CORS_ALLOWED_ORIGINS, API_LOG_LEVEL } = parsed.env;
+  const app = await createApp({
+    logger: new JsonLogger({ level: API_LOG_LEVEL }),
+    corsAllowedOrigins: API_CORS_ALLOWED_ORIGINS,
+    hsts: PRODUCTION_LIKE.has(APP_ENV),
+  });
   await app.listen(API_PORT, API_HOST);
 }
 

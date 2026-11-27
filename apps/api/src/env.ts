@@ -1,15 +1,75 @@
 import { z } from 'zod';
 
 /**
- * API runtime configuration (decision P-107). Every variable is required and
- * validated at startup; there are no silent defaults. Secrets management is
- * not decided yet (docs/GAPS.md G-08), so no secret-bearing variables exist.
+ * API runtime configuration (decision P-107; security baseline D-019, D-020).
+ * Required variables have no defaults. The two optional variables have
+ * documented, secure defaults: no cross-origin access, and `info` logging.
+ * Secrets management is not decided yet (docs/GAPS.md G-08), so no
+ * secret-bearing variables exist.
  */
-export const apiEnvSchema = z.object({
-  APP_ENV: z.enum(['development', 'test', 'staging', 'production']),
-  API_HOST: z.string().trim().min(1),
-  API_PORT: z.coerce.number().int().min(1).max(65535),
-});
+export const LOG_LEVELS = ['error', 'warn', 'info', 'debug'] as const;
+export type LogLevelName = (typeof LOG_LEVELS)[number];
+
+const APP_ENVS = ['development', 'test', 'staging', 'production'] as const;
+
+/** Environments that must behave like production (HTTPS-only origins, HSTS, no debug logs). */
+export const PRODUCTION_LIKE: ReadonlySet<string> = new Set(['staging', 'production']);
+
+/**
+ * A single exact origin: `scheme://host[:port]` with no path, query, fragment,
+ * credentials or wildcard. Anything else is rejected, never interpreted.
+ */
+export function isExactOrigin(value: string): boolean {
+  if (value.includes('*')) return false;
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') return false;
+  return url.origin === value;
+}
+
+const corsOriginList = z
+  .string()
+  .transform((raw) =>
+    raw
+      .split(',')
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0),
+  )
+  .refine((origins) => origins.every(isExactOrigin), {
+    message: 'must be a comma-separated list of exact http(s) origins (no wildcards or paths)',
+  });
+
+export const apiEnvSchema = z
+  .object({
+    APP_ENV: z.enum(APP_ENVS),
+    API_HOST: z.string().trim().min(1),
+    API_PORT: z.coerce.number().int().min(1).max(65535),
+    /** Optional. Absent or empty means no cross-origin access at all (D-019). */
+    API_CORS_ALLOWED_ORIGINS: corsOriginList.default([]),
+    /** Optional. Defaults to `info` (D-020). */
+    API_LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
+  })
+  .superRefine((env, ctx) => {
+    if (!PRODUCTION_LIKE.has(env.APP_ENV)) return;
+    if (env.API_CORS_ALLOWED_ORIGINS.some((origin) => !origin.startsWith('https://'))) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['API_CORS_ALLOWED_ORIGINS'],
+        message: 'must use https:// origins in staging and production',
+      });
+    }
+    if (env.API_LOG_LEVEL === 'debug') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['API_LOG_LEVEL'],
+        message: 'debug logging is not allowed in staging and production',
+      });
+    }
+  });
 
 export type ApiEnv = z.infer<typeof apiEnvSchema>;
 

@@ -31,3 +31,24 @@ test('API unknown route returns the error envelope', async ({ request }) => {
   const body = errorEnvelopeSchema.parse(await res.json());
   expect(body.error.code).toBe('NOT_FOUND');
 });
+
+test('API sends the security baseline headers and allows no cross-origin access by default', async ({
+  request,
+}) => {
+  const res = await request.get(`${API}/health`, { headers: { Origin: 'https://other.example' } });
+  const headers = res.headers();
+  expect(headers['x-content-type-options']).toBe('nosniff');
+  expect(headers['x-frame-options']).toBe('DENY');
+  expect(headers['content-security-policy']).toBe("default-src 'none'; frame-ancestors 'none'");
+  expect(headers['cache-control']).toBe('no-store');
+  expect(headers['access-control-allow-origin']).toBeUndefined();
+});
+
+test('web sends the security baseline headers', async ({ page }) => {
+  const response = await page.goto('/');
+  const headers = response?.headers() ?? {};
+  expect(headers['x-content-type-options']).toBe('nosniff');
+  expect(headers['x-frame-options']).toBe('DENY');
+  expect(headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
+  expect(headers['permissions-policy']).toContain('camera=()');
+});

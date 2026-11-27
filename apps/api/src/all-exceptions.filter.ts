@@ -42,12 +42,22 @@ export function errorCodeForStatus(status: number): ErrorCode {
  * Converts every thrown value into the P-108 error envelope. Non-HTTP errors
  * become 500 INTERNAL_ERROR; their details are logged server-side with the
  * request id and never sent to the client.
+ *
+ * Logging (D-020): 5xx are logged at `error` with the (redacted) error and
+ * stack; 4xx are logged at `info` with status and code only, so neither
+ * client input nor exception messages reach the log. Guards (audit L-05):
+ * non-HTTP contexts are logged and left to their transport, and a response
+ * whose headers were already sent is never written to again.
  */
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger('Exceptions');
 
   catch(exception: unknown, host: ArgumentsHost): void {
+    if (host.getType() !== 'http') {
+      this.logger.error({ event: 'exception', transport: host.getType(), error: exception });
+      return;
+    }
     const http = host.switchToHttp();
     const req = http.getRequest<Request>();
     const res = http.getResponse<Response>();
@@ -58,11 +68,21 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const requestId = req.requestId ?? resolveRequestId(undefined);
 
     if (status >= 500) {
-      const detail =
-        exception instanceof Error ? (exception.stack ?? exception.message) : 'non-error thrown';
-      this.logger.error(`requestId=${requestId} status=${String(status)} ${detail}`);
+      this.logger.error({
+        event: 'exception',
+        requestId,
+        status,
+        code,
+        error: exception instanceof Error ? exception : 'non-error thrown',
+      });
+    } else {
+      this.logger.log({ event: 'http_error', requestId, status, code });
     }
 
+    if (res.headersSent) {
+      this.logger.warn({ event: 'response_already_sent', requestId, status });
+      return;
+    }
     const body: ErrorEnvelope = { error: { code, message: messageByCode[code], requestId } };
     res.status(status).json(body);
   }

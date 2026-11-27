@@ -50,6 +50,31 @@ describe('API refuses invalid configuration', () => {
   });
 });
 
+describe('API refuses unsafe security configuration (D-019, D-020)', () => {
+  const base = { API_HOST: '127.0.0.1', API_PORT: '4000' };
+  it.each([
+    [
+      'wildcard CORS origin',
+      { APP_ENV: 'development', API_CORS_ALLOWED_ORIGINS: '*' },
+      'API_CORS_ALLOWED_ORIGINS',
+    ],
+    [
+      'http origin in production',
+      { APP_ENV: 'production', API_CORS_ALLOWED_ORIGINS: 'http://a.example' },
+      'API_CORS_ALLOWED_ORIGINS',
+    ],
+    [
+      'debug logging in production',
+      { APP_ENV: 'production', API_LOG_LEVEL: 'debug' },
+      'API_LOG_LEVEL',
+    ],
+  ])('exits non-zero on %s', (_label, env, variable) => {
+    const r = runApi({ ...base, ...env });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain(`${variable} is invalid`);
+  });
+});
+
 describe('Web refuses invalid configuration', () => {
   it('`next start` fails when APP_ENV is missing', () => {
     const r = runNextStart({});
