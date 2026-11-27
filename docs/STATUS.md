@@ -262,3 +262,74 @@ the browsers preinstalled in the container (Chromium v1243).
 - GitHub Actions on the remediation commit: see the CI run recorded after the push.
 - L-02, L-04, L-05, L-08 and L-09 are open (out of scope). I-02 and I-03 await owner decisions.
 - M-04 and M-05 were recorded as Phase 2 prerequisites (G-38) and not implemented.
+
+## Phase 1 residual remediation (2026-11-27)
+
+**Authorization:** owner message "Phase 1 Audit Residual Remediation — R-01 and R-02". Recorded
+separately from the Phase 1 acceptance and from the first audit remediation above. **Status:**
+implemented and verified as below — **awaiting owner review and independent audit.** Phase 2
+remains **not authorized**.
+
+| Item                        | Value                                                                                                                                                                    |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Starting commit             | `9a800bcc6afaccbc8dc8b5f6d0c5bbdf3a65559b`                                                                                                                               |
+| Residual remediation commit | `36a8c7241059db0a5db580b734a2b00f882a4c7e` (tests, fixtures, config, docs)                                                                                               |
+| Scope                       | R-01, R-02 (mandatory); R-04, R-06 (optional, implemented narrowly); R-09 governance corrections. No files under `apps/`, `packages/` or `docs/specifications/` changed. |
+| Decisions                   | D-016 – D-018, and a D-010 correction (awaiting owner review)                                                                                                            |
+| Left open                   | R-03, R-05, R-10 (not authorized); R-07, R-08 informational; L-02, L-04, L-05, L-08, L-09, I-02, I-03 unchanged                                                          |
+
+### Before and after (reproduced)
+
+| Reproduction                                                                                    | Before (`9a800bc`, scratch clone)                                                                                        | After (`36a8c72`, clean-room clone)                                                                                                 |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| R-01: `packages/contracts/src/helper.test.ts` imports `node:http`; `laundered.ts` re-exports it | `pnpm arch` exit 0; `tsc -p tsconfig.build.json` exit 0, emitting `helper.test.js` (imports `node:http`) into the output | `pnpm arch` exit 1: `no-runtime-imports-of-test-files: packages/contracts/src/laundered.ts → packages/contracts/src/helper.test.ts` |
+| R-02: `apps/api/src/modules/registry.ts` imports `./health/health.controller.js`                | `pnpm arch` exit 0                                                                                                       | `pnpm arch` exit 1: `api-module-entry-only: apps/api/src/modules/registry.ts → apps/api/src/modules/health/health.controller.ts`    |
+| R-02 counterpart: `registry.ts` re-exports `./health/index.js` (public entry)                   | —                                                                                                                        | `pnpm arch` exit 0 (allowed)                                                                                                        |
+
+### Clean-room verification of `36a8c72`
+
+Fresh clone; empty pnpm store (356 packages downloaded, 0 reused) and empty Corepack cache; Node
+v24.22.3; `APP_ENV=test`. Playwright used the browsers preinstalled in the container.
+
+| #   | Command                                              | Result                                                                                                                 |
+| --- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 1   | `pnpm install --frozen-lockfile --store-dir <empty>` | exit 0; "Lockfile passes supply-chain policies"                                                                        |
+| 2   | `pnpm format:check`                                  | exit 0                                                                                                                 |
+| 3   | `pnpm lint`                                          | exit 0                                                                                                                 |
+| 4   | `pnpm typecheck`                                     | exit 0                                                                                                                 |
+| 5   | `pnpm test`                                          | exit 0: contracts 12, web 3, api 25, tests 74 (architecture 45, build-output 4, policy 20, startup 5) = **114 passed** |
+| 6   | `pnpm arch`                                          | exit 0: no violations (66 modules, 89 dependencies; all of `tests/` now scanned)                                       |
+| 7   | `pnpm build`                                         | exit 0                                                                                                                 |
+| 8   | `pnpm test:e2e`                                      | exit 0: **6 passed**                                                                                                   |
+| 9   | `pnpm audit` / `pnpm audit --prod`                   | "No known vulnerabilities found" (both)                                                                                |
+| 10  | Frozen install on Node 22.23.5                       | exit 1: `ERR_PNPM_UNSUPPORTED_ENGINE`                                                                                  |
+| 11  | `git status` after all checks and reproductions      | clean                                                                                                                  |
+
+### Regression tests and mutation checks
+
+- **Fixtures:** `rules/no-runtime-imports-of-test-files/` covers re-export, value, type-only,
+  dynamic and `typeof import()` forms, plus `*.spec.*`, `__tests__/` and `.tsx`.
+  `rules/api-module-entry-only/` gains a registry file and a re-exporting barrel directly under
+  `src/modules/`. `valid/` gains a public-entry `modules/index.ts` barrel and test-to-test imports,
+  and still produces no violations.
+- **Real graph:** a reachability test asserts that no non-test workspace file reaches a test file
+  through any chain of imports. `build-output.test.ts` asserts that no test file exists in
+  `packages/contracts/dist` or `apps/api/dist`; a planted `leak.test.js` made it fail.
+- **R-04:** the scanned `tests/` modules are exactly the eight source files; fixtures,
+  `node_modules` and reports are not scanned.
+- **R-06:** 8 new policy tests. Planting `--config.minimumReleaseAge=0` in the real `ci.yml` made
+  the repository test fail and name `.github/workflows/ci.yml:43`.
+
+Each mutation was applied temporarily and restored byte-identical:
+
+| Mutation                                           | Result                                         |
+| -------------------------------------------------- | ---------------------------------------------- |
+| Delete `no-runtime-imports-of-test-files`          | 1 test fails (rule inventory)                  |
+| Revert the R-02 exemption to all of `src/modules/` | 1 test fails (`api-module-entry-only` fixture) |
+| Narrow the test-file pattern to `.test.ts` only    | 1 test fails (R-01 fixture)                    |
+| Limit the R-01 rule to `packages/`                 | 1 test fails (R-01 fixture)                    |
+
+### Not done or not reproduced
+
+- GitHub Actions on the residual-remediation commit: see the CI run recorded after the push.
+- R-03, R-05 and R-10 remain open (not authorized).
