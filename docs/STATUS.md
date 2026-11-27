@@ -533,17 +533,17 @@ conditional on this gate; it starts with the G-03 – G-08 entry decisions.
 
 **Authorization:** owner, 2026-11-27, conditional on the Phase 1 gate (satisfied). Plan:
 [`architecture/phase-2-plan.md`](architecture/phase-2-plan.md). Decisions: D-024 – D-031.
-**Status: IN PROGRESS — not complete.** M2.0 – M2.3 done and CI-verified; M2.4 and M2.5 not started; M2.6 blocked on the identity-provider vendor (owner decision, D-025). The Phase 2 exit gate is **not** met.
+**Status: IN PROGRESS — not complete.** M2.0 – M2.6 done; see the exit-gate assessment below. Phase 2 is not closed.
 
-| Milestone                                | Status                   | Commit / evidence                                                                                                                                                                                                                                                                           |
-| ---------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| M2.0 Entry decisions and plan            | done                     | `aa7edec`; spike evidence in `architecture/spikes/`                                                                                                                                                                                                                                         |
-| M2.1 Database foundation and isolation   | done; CI verified        | `eaee6e6`, CI #13 (`45952082792`) success: Kysely/pg, migrations, RLS + FORCE, `withTenant()`, startup role check, `pnpm test:db` in CI                                                                                                                                                     |
-| M2.2 Tenant resolution and context       | done; CI verified        | `53b79c9`, CI #14 (`45952364343`) success: slug contract, `app.resolve_active_tenant`, `GET /public/tenants/:slug`; 13 real-PostgreSQL tests                                                                                                                                                |
-| M2.3 Identity and authorization boundary | done; CI verified        | `e5933cc`, CI #15 (`45952916611`) success: jose verifier (RS256/ES256 only, iss/aud/exp/nbf/iat), separate owner/operator trust domains, operator MFA, `app.find_account` (no auto-creation), owner access only via an active membership read under RLS; 15 real-PostgreSQL + 11 unit tests |
-| M2.4 Provisioning and lifecycle          | done (local); CI pending | see "M2.4 verification": operator-only audited SECURITY DEFINER provisioning and compare-and-set lifecycle; separate operator credential; 32 real-PostgreSQL tests                                                                                                                          |
-| M2.5 Abuse controls                      | done (local); CI pending | see "M2.5 verification": in-process fixed-window limits before authentication, bounded fail-closed key table; instance-local only (D-031)                                                                                                                                                   |
-| M2.6 Web BFF session                     | done (local); CI pending | D-032 (ZITADEL, conditional), D-033; API operator MFA proof `3b54808`; web BFF login: see "M2.6 verification"                                                                                                                                                                               |
+| Milestone                                | Status                                                   | Commit / evidence                                                                                                                                                                                                                                                                           |
+| ---------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M2.0 Entry decisions and plan            | done                                                     | `aa7edec`; spike evidence in `architecture/spikes/`                                                                                                                                                                                                                                         |
+| M2.1 Database foundation and isolation   | done; CI verified                                        | `eaee6e6`, CI #13 (`45952082792`) success: Kysely/pg, migrations, RLS + FORCE, `withTenant()`, startup role check, `pnpm test:db` in CI                                                                                                                                                     |
+| M2.2 Tenant resolution and context       | done; CI verified                                        | `53b79c9`, CI #14 (`45952364343`) success: slug contract, `app.resolve_active_tenant`, `GET /public/tenants/:slug`; 13 real-PostgreSQL tests                                                                                                                                                |
+| M2.3 Identity and authorization boundary | done; CI verified                                        | `e5933cc`, CI #15 (`45952916611`) success: jose verifier (RS256/ES256 only, iss/aud/exp/nbf/iat), separate owner/operator trust domains, operator MFA, `app.find_account` (no auto-creation), owner access only via an active membership read under RLS; 15 real-PostgreSQL + 11 unit tests |
+| M2.4 Provisioning and lifecycle          | done; CI verified (#17 `45954074412`, `c82524b`)         | see "M2.4 verification": operator-only audited SECURITY DEFINER provisioning and compare-and-set lifecycle; separate operator credential; 32 real-PostgreSQL tests                                                                                                                          |
+| M2.5 Abuse controls                      | done; CI verified (#18 `45954511923`, `7933042`)         | see "M2.5 verification": in-process fixed-window limits before authentication, bounded fail-closed key table; instance-local only (D-031)                                                                                                                                                   |
+| M2.6 Web BFF session                     | done; CI verified (#19 `45954924558`, #20 `46008869486`) | D-032 (ZITADEL, conditional), D-033; API operator MFA proof `3b54808`; web BFF login: see "M2.6 verification"                                                                                                                                                                               |
 
 ### M2.1 verification (local, Node 24.22.3, PostgreSQL 16.15 loopback cluster, scram-sha-256)
 
@@ -629,3 +629,33 @@ origin, end-session redirect, provider outage, plain-http issuer refused.
 Mutations caught: operator MFA check removed (1), logout Origin check removed (1), nonce removed
 (6, re-run over TLS). Not tested: a real ZITADEL instance (no account; D-032 conditions), and a
 browser-level login (Playwright) — the handlers are exercised directly with real HTTP.
+
+## Phase 2 exit-gate assessment (2026-11-27)
+
+**Status: exit-gate criteria MET in the repository and CI — awaiting owner acceptance and an
+independent review. Phase 2 is NOT recorded as closed.** Production use of the identity provider
+remains conditional (D-032).
+
+| #   | Criterion (`architecture/phase-2-plan.md`)                                          | Evidence                                                                                                | Result |
+| --- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------ |
+| 1   | M2.1 – M2.5 done with tests; M2.6 done or deferred                                  | Ledger above; commits `eaee6e6`, `53b79c9`, `e5933cc`, `c82524b`, `7933042`, `3b54808`, `1b124ba`       | met    |
+| 2   | Negative isolation, authentication and authorization tests on real PostgreSQL in CI | `pnpm test:db` (105) in every CI run since #13                                                          | met    |
+| 3   | Tenant lifecycle provision → active → suspended → reactivated (→ retired)           | `operator-tenants.db.test.ts`                                                                           | met    |
+| 4   | Every tenant-owned table passes the RLS catalog test                                | `database.db.test.ts` catalog tests                                                                     | met    |
+| 5   | Full gates and CI green on the gate commit; governance updated                      | CI #20 (`46008869486`) on `1b124ba`: **success**, all steps; DECISIONS D-024 – D-033; GAPS; this ledger | met    |
+| —   | D-022: tenant model and authentication boundary verified                            | Items 2 – 4 plus `identity.db.test.ts` (owner/operator separation, MFA proof)                           | met    |
+
+**Not verified (must be done before production, not blockers for the Phase 2 code gate):**
+
+- Against a **real ZITADEL instance** (no account/contract exists): discovery, real `amr`/`auth_time`
+  values, JWT access-token setting, audience scope, key rotation, end-session and redirect rules.
+- **Browser-level** login (Playwright through a real provider); the handlers are tested directly
+  over real HTTP/TLS.
+- The D-032 contractual conditions (EU-only processing, sub-processors, plan/MFA, pricing, SLA,
+  retention, key rotation, rate limits, certifications).
+
+**Residual risks carried forward:** instance-local rate limits and untrusted `X-Forwarded-For`
+(D-031); stateless sessions — a stolen cookie is valid until expiry, account revocation at the
+provider takes effect at token expiry (D-033); in-database audit rows roll back with failed
+transactions, so the shipped log is the trail of record and log shipping does not exist yet
+(G-32); earlier LOW/INFO residuals (G-41).
