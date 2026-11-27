@@ -113,6 +113,12 @@ describe('C-02: binding between the tokens, the client and the session', () => {
     expect(await verifyLogin(other, config, now())).toBeUndefined();
   });
 
+  it('refuses an ID token whose authorized party is another client, even with a matching pair', async () => {
+    // Only azp differs: aud contains our client and at_hash binds the (valid) access token.
+    const tokens = await mfaLogin({ idClaims: { azp: 'other-app' } });
+    expect(await verifyLogin(tokens, config, now())).toBeUndefined();
+  });
+
   it('refuses an access token issued to another client', async () => {
     const tokens = await mfaLogin({ accessClaims: { client_id: 'other-app' } });
     expect(await verifyLogin(tokens, config, now())).toBeUndefined();

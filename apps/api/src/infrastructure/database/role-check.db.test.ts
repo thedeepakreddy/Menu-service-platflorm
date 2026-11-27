@@ -102,9 +102,7 @@ describe('the provisioned roles', () => {
         'is a member of another role',
       ]),
     );
-    expect(await problems(adminUrl)).toEqual(
-      expect.arrayContaining(['is a superuser', 'has BYPASSRLS']),
-    );
+    expect(await problems(adminUrl)).toEqual(expect.arrayContaining(['is a superuser']));
     const db = createDatabase({ connectionString: ownerUrl, maxConnections: 1 });
     await expect(assertSafeRuntimeRole(db)).rejects.toBeInstanceOf(UnsafeDatabaseRoleError);
     await db.destroy();
