@@ -246,7 +246,7 @@ describe('tenant context is set only by withTenant() (D-028)', () => {
       ],
       [
         join('infrastructure', 'database', 'migrate.ts'),
-        /set_config\('migrations\.guard', \$1, true\)/g,
+        /set_config\('migrations\.guard', \$1, true\)|const FORBIDDEN_SETTING = .*$/gm,
       ],
     ]);
     const offenders = files.filter((file) => {

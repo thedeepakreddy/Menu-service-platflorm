@@ -65,7 +65,7 @@ export const webEnvSchema = z
      * Number of trusted reverse proxies in front of the web app that append to X-Forwarded-For
      * (D-038). 0 = none: the per-address login limits then fall back to global limits only.
      */
-    WEB_TRUSTED_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
+    WEB_TRUSTED_PROXY_HOPS: z.coerce.number().int().min(0).max(5).optional(),
     /** Global cap on token requests to the identity provider per instance and minute (C-03). */
     WEB_TOKEN_REQUESTS_PER_MINUTE: z.coerce.number().int().min(1).max(3000).default(600),
   })
@@ -117,6 +117,15 @@ export const webEnvSchema = z
       !env.WEB_PUBLIC_ORIGIN.startsWith('https://')
     ) {
       ctx.addIssue({ code: 'custom', path: ['WEB_PUBLIC_ORIGIN'], message: 'must use https' });
+    }
+    // R2-04: the proxy topology decides whose address the login limits see; it must be stated
+    // explicitly in staging and production, never left to a default.
+    if (PRODUCTION_LIKE.has(env.APP_ENV) && env.WEB_TRUSTED_PROXY_HOPS === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['WEB_TRUSTED_PROXY_HOPS'],
+        message: 'must be set explicitly in staging and production',
+      });
     }
     if (
       env.WEB_API_ORIGIN !== undefined &&

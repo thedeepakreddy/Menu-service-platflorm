@@ -98,8 +98,17 @@ export function createAuthHandlers(
     webClientAddress(request.headers.get('x-forwarded-for'), config.trustedProxyHops);
 
   /** Rate limits for the login routes; false = refuse with 429. */
+  /**
+   * The per-client check runs FIRST, so requests already refused for one client never consume
+   * the shared global budget (independent review R2-02: otherwise one address could exhaust it
+   * and lock everyone out). A client whose address is unknown (no trusted proxy) is not put into
+   * one shared per-client bucket, which would again let one attacker lock out everyone
+   * (R2-04); only the global limit applies to it.
+   */
   function admit(request: Request, route: string): boolean {
-    return global.hit(route) && perClient.hit(`${route}|${clientOf(request)}`);
+    const client = clientOf(request);
+    if (client !== 'unknown' && !perClient.hit(`${route}|${client}`)) return false;
+    return global.hit(route);
   }
 
   /**

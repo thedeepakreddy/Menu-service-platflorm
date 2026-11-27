@@ -1,10 +1,14 @@
 // Login verification (D-034): reproduces the audit's C-01/C-02 attacks and proves they fail.
-import { jwtVerify, SignJWT } from 'jose';
+import { errors, jwtVerify, SignJWT } from 'jose';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { createTestIssuer } from '../../../test/identity/test-issuer.js';
 import type { TestIssuer } from '../../../test/identity/test-issuer.js';
-import { MAX_ID_TOKEN_AGE_SECONDS, verifyLogin } from './login-verifier.js';
+import {
+  MAX_ID_TOKEN_AGE_SECONDS,
+  ProviderUnavailableError,
+  verifyLogin,
+} from './login-verifier.js';
 import type { LoginDomainConfig } from './login-verifier.js';
 
 const ISSUER = 'https://operators.idp.test';
@@ -209,5 +213,22 @@ describe('token hygiene', () => {
       { typ: 'logout+jwt', alg: 'RS256' },
     );
     expect(await verifyLogin({ ...tokens, accessToken: weird }, config)).toBeUndefined();
+  });
+});
+
+describe('identity provider outages are 503-class, not "bad token" (audit C-04, review R2-09)', () => {
+  it.each([
+    [
+      'a non-200 JWKS response',
+      () => new errors.JOSEError('Expected 200 OK from the JSON Web Key Set HTTP response'),
+    ],
+    ['an unparseable JWKS', () => new errors.JWKSInvalid('JSON Web Key Set malformed')],
+    ['a JWKS timeout', () => new errors.JWKSTimeout()],
+    ['a refused connection', () => new TypeError('fetch failed')],
+  ])('maps %s to ProviderUnavailableError', async (_name, failure) => {
+    const broken = { ...config, keys: () => Promise.reject(failure()) };
+    await expect(verifyLogin(await mfaLogin(), broken, now())).rejects.toBeInstanceOf(
+      ProviderUnavailableError,
+    );
   });
 });

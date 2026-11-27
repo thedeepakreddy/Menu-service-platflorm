@@ -169,6 +169,13 @@ async function catalogViolations(client: pg.Client): Promise<string[]> {
   if ((audit[0]?.triggers ?? 0) < 2)
     v.push('operator_audit: immutability triggers missing or disabled');
 
+  // The definer creates nothing (review R2-07): no CREATE on any schema.
+  const definerCreate = await q<{ schema: string }>(`
+      SELECT n.nspname AS schema FROM pg_namespace n
+      WHERE has_schema_privilege('app_definer', n.oid, 'CREATE')
+        AND n.nspname NOT LIKE 'pg_%' AND n.nspname <> 'information_schema'`);
+  for (const d of definerCreate) v.push(`role app_definer: may create objects in ${d.schema}`);
+
   // Application roles: no superuser/BYPASSRLS; the definer cannot log in and only the migration
   // role may SET ROLE to it, without inheriting it.
   const roles = await q<{
@@ -404,6 +411,21 @@ describe('adversarial: the operator audit trail is append-only (audit B-04)', ()
 });
 
 describe('the definer role (D-035)', () => {
+  it('cannot be used to create a leaking view or function, even via SET ROLE (review R2-07)', async () => {
+    await expect(
+      asRole(
+        ownerUrl,
+        'SET ROLE app_definer; CREATE VIEW app.leak AS SELECT * FROM app.memberships',
+      ),
+    ).rejects.toThrow(/permission denied/);
+    await expect(
+      asRole(
+        ownerUrl,
+        'SET ROLE app_definer; CREATE FUNCTION app.leak() RETURNS int LANGUAGE sql AS $$ SELECT 1 $$',
+      ),
+    ).rejects.toThrow(/permission denied/);
+  });
+
   it('cannot be used to log in and cannot be assumed by the application roles', async () => {
     for (const url of [runtimeUrl, operatorUrl]) {
       await expect(asRole(url, 'SET ROLE app_definer')).rejects.toThrow(/permission denied/);

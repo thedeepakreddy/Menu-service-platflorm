@@ -8,7 +8,6 @@ describe('parseWebEnv', () => {
       APP_ENV: 'production',
       WEB_OWNER_OIDC_SCOPES: '',
       WEB_OPERATOR_OIDC_SCOPES: '',
-      WEB_TRUSTED_PROXY_HOPS: 0,
       WEB_TOKEN_REQUESTS_PER_MINUTE: 600,
     });
   });
@@ -42,6 +41,7 @@ describe('login configuration (D-030, D-034, D-038)', () => {
     WEB_SESSION_SECRET: secret,
     WEB_API_ORIGIN: 'https://api.internal.example',
     WEB_API_BFF_CREDENTIAL: 'synthetic-bff-credential-for-tests-only-00000',
+    WEB_TRUSTED_PROXY_HOPS: '1',
     ...owner,
   };
 
@@ -85,6 +85,11 @@ describe('login configuration (D-030, D-034, D-038)', () => {
       'WEB_API_BFF_CREDENTIAL',
     ],
     ['too many proxy hops', { ...full, WEB_TRUSTED_PROXY_HOPS: '6' }, 'WEB_TRUSTED_PROXY_HOPS'],
+    [
+      'no explicit proxy hops in production (R2-04)',
+      { ...full, WEB_TRUSTED_PROXY_HOPS: undefined },
+      'WEB_TRUSTED_PROXY_HOPS',
+    ],
     [
       'an origin with a path',
       { ...full, WEB_PUBLIC_ORIGIN: 'https://app.example/x' },

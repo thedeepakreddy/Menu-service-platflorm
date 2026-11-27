@@ -77,7 +77,7 @@ export function authConfigFromEnv(env: WebEnv): AuthConfig | undefined {
     providers,
     apiOrigin: env.WEB_API_ORIGIN,
     bffCredential: env.WEB_API_BFF_CREDENTIAL,
-    trustedProxyHops: env.WEB_TRUSTED_PROXY_HOPS,
+    trustedProxyHops: env.WEB_TRUSTED_PROXY_HOPS ?? 0,
     tokenRequestsPerMinute: env.WEB_TOKEN_REQUESTS_PER_MINUTE,
   };
 }

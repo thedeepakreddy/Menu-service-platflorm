@@ -32,7 +32,7 @@ not organisational independence (see §21, R-01).
   commits (§18).
 - **Original defects:** each was reproduced by a test first (or shown, for C-01, by a
   precondition test), then shown gone.
-- **Mutation testing:** 16 deliberate mutations were run. 15 are caught; 1 is an equivalent
+- **Mutation testing:** 17 deliberate mutations were run. 16 are caught; 1 is an equivalent
   mutant (§17).
 - **Proposed verdict:** **PASS WITH CONDITIONS** (§25). Every Doc 05 Phase 2 exit criterion is
   implemented and verified (§23). The conditions are pre-production blockers (§22), not Phase 2
@@ -72,7 +72,7 @@ A-04/A-05/A-03 (see the plan).
 | **A-02**      | Medium  | Owner `USING(true)` policies; views leak                       | D-035: `app_definer` owns functions and policies; `app_owner` has no row access; a view created by `app_owner` leaks 0 rows; catalog test requires `security_invoker`                                                                                                                                                                                                                                                                                                 | Remediated                                 | 3 (R-03: migration role is DDL authority)                                      | DDL authority is inherent; mitigated by catalog test and migration identity                                                |
 | **A-03**      | Medium  | Policy test accepts `OR true`                                  | Restrictive backstops; canonical-expression catalog check; adversarial test shows `OR true` is neutralised and flagged; mutation M-07                                                                                                                                                                                                                                                                                                                                 | Remediated                                 | —                                                                              | —                                                                                                                          |
 | **A-04**      | Medium  | New functions default to PUBLIC EXECUTE                        | Default privileges revoke PUBLIC; reviewed grant list per function; adversarial test; mutation M-09                                                                                                                                                                                                                                                                                                                                                                   | Remediated                                 | —                                                                              | —                                                                                                                          |
-| **A-05**      | Medium  | Migration runner identity, order, COMMIT                       | Identity (must own the database; not superuser/BYPASSRLS/CREATEROLE; no role switch), out-of-order refused, transaction control refused, guard check (`migrate.db.test.ts` 14); mutation M-10                                                                                                                                                                                                                                                                         | Remediated                                 | —                                                                              | —                                                                                                                          |
+| **A-05**      | Medium  | Migration runner identity, order, COMMIT                       | Identity (must own the database; not superuser/BYPASSRLS/CREATEROLE; no role switch), out-of-order refused, transaction control refused (E-strings and `set_config('role')` too, review R2-05), guard and role check after each file (`migrate.db.test.ts` 16); mutation M-10                                                                                                                                                                                         | Remediated                                 | —                                                                              | —                                                                                                                          |
 | **B-02**      | Medium  | "Rejected" logged when applied                                 | Operation ids (unique), reconciliation through the audit row, `GET /operator/operations/:id`, duplicate-id retry cannot apply twice; lost-reply test shows `applied` → 503, never "rejected"                                                                                                                                                                                                                                                                          | Remediated                                 | —                                                                              | —                                                                                                                          |
 | **B-03**      | Medium  | Caller-asserted operator id                                    | Operator functions take the session token hash and derive the account inside the database; forged, owner or revoked session hashes refused even with the operator credential                                                                                                                                                                                                                                                                                          | Remediated                                 | 3 (R-04: runtime + operator credentials together could mint and use a session) | Requires two separate credentials; documented in D-034                                                                     |
 | **B-04**      | Medium  | Audit table erasable                                           | Owner privileges revoked; triggers refuse UPDATE/DELETE/TRUNCATE even for a superuser; definer has no UPDATE; catalog check; mutation M-08                                                                                                                                                                                                                                                                                                                            | Remediated                                 | 2 (PP-05: ship logs; owner DDL could drop triggers)                            | The in-database trail is protected from every application path; true append-only needs external log shipping               |
@@ -278,24 +278,25 @@ It is append-only for every role, and outcomes are reconciled against it.
 **Mutation checks.** For each, the change was confirmed applied, the targeted test was run, and
 the file was restored byte-identical (git-clean afterwards):
 
-| ID   | Mutation                                                | Result                                                                                                                                                                          |
-| ---- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| M-01 | Remove pool and client error listeners                  | Built API crashed (57P01 unhandled): **caught**                                                                                                                                 |
-| M-02 | Skip `at_hash` binding                                  | 2 tests fail: **caught**                                                                                                                                                        |
-| M-03 | Skip `azp` check                                        | Survived at first; added an azp-only test; now 1 fails: **caught**                                                                                                              |
-| M-04 | Skip the operator MFA requirement                       | 3 fail: **caught**                                                                                                                                                              |
-| M-05 | Skip the membership check                               | 9 fail: **caught**                                                                                                                                                              |
-| M-06 | Skip the exact-privilege allowlist                      | 2 fail: **caught**                                                                                                                                                              |
-| M-07 | Restrictive backstop made permissive                    | 2 fail: **caught**                                                                                                                                                              |
-| M-08 | Drop the TRUNCATE trigger                               | 3 fail: **caught**                                                                                                                                                              |
-| M-09 | Drop the default-privilege revoke                       | 3 fail: **caught**                                                                                                                                                              |
-| M-10 | Skip the migration identity check                       | 6 fail: **caught**                                                                                                                                                              |
-| M-11 | Per-route rate-limit key                                | 2 fail: **caught**                                                                                                                                                              |
-| M-12 | Skip the single-use login transaction                   | 1 fails: **caught**                                                                                                                                                             |
-| M-13 | Skip orphan prevention on deactivation                  | 1 fails: **caught**                                                                                                                                                             |
-| M-14 | Accept revoked sessions                                 | 2 fail: **caught**                                                                                                                                                              |
-| M-15 | Drop the `kind`/`mfa` filter in `operator_from_session` | **Survived: equivalent mutant.** An operator session without MFA cannot exist (CHECK), and the account-kind filter alone refuses owner sessions; documented as defence in depth |
-| M-16 | Pool error listener renamed                             | 3 unhandled errors: **caught**                                                                                                                                                  |
+| ID   | Mutation                                                                                  | Result                                                                                                                                                                          |
+| ---- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M-01 | Remove pool and client error listeners                                                    | Built API crashed (57P01 unhandled): **caught**                                                                                                                                 |
+| M-02 | Skip `at_hash` binding                                                                    | 2 tests fail: **caught**                                                                                                                                                        |
+| M-03 | Skip `azp` check                                                                          | Survived at first; added an azp-only test; now 1 fails: **caught**                                                                                                              |
+| M-04 | Skip the operator MFA requirement                                                         | 3 fail: **caught**                                                                                                                                                              |
+| M-05 | Skip the membership check                                                                 | 9 fail: **caught**                                                                                                                                                              |
+| M-06 | Skip the exact-privilege allowlist                                                        | 2 fail: **caught**                                                                                                                                                              |
+| M-07 | Restrictive backstop made permissive                                                      | 2 fail: **caught**                                                                                                                                                              |
+| M-08 | Drop the TRUNCATE trigger                                                                 | 3 fail: **caught**                                                                                                                                                              |
+| M-09 | Drop the default-privilege revoke                                                         | 3 fail: **caught**                                                                                                                                                              |
+| M-10 | Skip the migration identity check                                                         | 6 fail: **caught**                                                                                                                                                              |
+| M-11 | Per-route rate-limit key                                                                  | 2 fail: **caught**                                                                                                                                                              |
+| M-12 | Skip the single-use login transaction                                                     | 1 fails: **caught**                                                                                                                                                             |
+| M-13 | Skip orphan prevention on deactivation                                                    | 1 fails: **caught**                                                                                                                                                             |
+| M-14 | Accept revoked sessions                                                                   | 2 fail: **caught**                                                                                                                                                              |
+| M-15 | Drop the `kind`/`mfa` filter in `operator_from_session`                                   | **Survived: equivalent mutant.** An operator session without MFA cannot exist (CHECK), and the account-kind filter alone refuses owner sessions; documented as defence in depth |
+| M-16 | Pool error listener renamed                                                               | 3 unhandled errors: **caught**                                                                                                                                                  |
+| M-17 | Global login limit checked before the per-client limit (the code the review found, R2-02) | 2 fail: **caught**                                                                                                                                                              |
 
 ## 18. CI results
 
@@ -378,8 +379,87 @@ verification."
 
 ## 24. Independent review results
 
-_Filled in from the separate reviewer's report (below)._
+**Reviewer.** A separate agent, started cold with no access to this session's reasoning, worked
+in its own clone of `8184813` against its own PostgreSQL cluster (port 55460) and wrote its own
+probes. Report: session scratchpad `review/REVIEW.md`; summarised here.
+
+**Gates it reproduced (fresh frozen install):**
+
+- format, lint, typecheck, arch (0 violations), build: pass.
+- `test`: 387.
+- `test:db`: 157 (10 files).
+- `test:e2e`: 12.
+
+**Original defects re-tested with its own probes.** No longer reproduce:
+
+- C-01 (same token for both roles, or an ID token as the access token: 401; Bearer and the proof
+  header refused).
+- C-02.
+- A-01: a member of `app_owner`, `pg_read_all_data` through a NOLOGIN intermediate,
+  `ALTER DATABASE … SET app.tenant_id`, `row_security=off` in the URL: all refused.
+- A-03, B-01, D-01 (21 path spellings tried), D-03, D-04/D-05, C-05/C-06, E-01 (invariant held
+  under sequences and races), E-03.
+
+Partly reproduced at `8184813`, and now handled:
+
+| ID                                            | Review finding                                                                                              | Sev.                       | Action (after `8184813`)                                                                                                                                                                                                                          | Remaining class                                                    |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| R2-02                                         | Global login limit consumed before the per-client check: one IP could lock everyone out                     | Medium, **blocks Phase 2** | **Fixed**: per-client first; refused requests never touch the global budget. The reproduction test (60 requests from one IP, then another IP still allowed) fails on the old code and passes now                                                  | —                                                                  |
+| R2-17                                         | D-034 – D-038 and STATUS/GAPS missing at `8184813`                                                          | Info, **blocks Phase 2**   | **Fixed** in `390060a` and `88ef7b7` (after the reviewed commit)                                                                                                                                                                                  | —                                                                  |
+| R2-01                                         | `app_runtime` alone can mint an MFA operator session; operator functions accept it                          | Medium                     | **Recorded accurately**: D-034 limitations; B-03 is "strengthened, not eliminated"; forging an operator action needs runtime **and** operator credentials                                                                                         | 3 (R-04)                                                           |
+| R2-08                                         | `app_owner` erases the audit in three DDL statements (disable trigger, grant itself TRUNCATE, truncate)     | Low (understated claim)    | **Recorded accurately** in D-035; the catalog test already requires enabled triggers; log shipping remains PP-05                                                                                                                                  | 2 (PP-05)                                                          |
+| R2-07 / A-02, A-04 via `SET ROLE app_definer` | The definer kept CREATE on `app`: a view or function created as the definer leaked                          | Low                        | **Fixed**: migration `0007` revokes CREATE; catalog check and a test that `CREATE VIEW/FUNCTION` as the definer is refused                                                                                                                        | —                                                                  |
+| R2-05 / A-05                                  | `COMMIT` hidden after an `E'\''` string; role switch via `set_config('role', …)`                            | Low                        | **Fixed**: escape-string aware scanner; `set_config('role'/'session_authorization')` refused; the runner also checks `current_user = session_user` after each file; two new tests                                                                 | 3 (static analysis of SQL is never complete; review and CI remain) |
+| R2-09 / C-04                                  | JWKS answering 500 or HTML gave 401                                                                         | Low                        | **Fixed**: generic JOSE / JWKSInvalid / timeout / refused connection → 503; 4 new tests                                                                                                                                                           | —                                                                  |
+| R2-04                                         | Default proxy hops 0: the whole site shares one login budget; behind the BFF all browsers share API budgets | Medium                     | **Fixed in code for the web side**: unknown clients are no longer pooled into one per-client bucket; `WEB_TRUSTED_PROXY_HOPS` required in staging/production. API-side shared budget behind a BFF without a forwarded address is recorded (D-037) | 2 (PP-04)                                                          |
+| R2-03                                         | Full key table refuses every new client in every group (about 12,500 /64s)                                  | Medium                     | **Recorded** in D-037 as a deliberate fail-closed choice that is also a denial-of-service lever                                                                                                                                                   | 2 (PP-04)                                                          |
+| R2-10 / B-02                                  | Reconciliation can report "not applied" while the original commit is in flight                              | Low                        | **Label made honest**: `not_applied_when_checked`; the client re-checks via `GET /operator/operations/:id`; a duplicate id can never apply twice                                                                                                  | 3                                                                  |
+| R2-06                                         | The stored hash is the credential at the database layer                                                     | Low                        | **Recorded** in D-034                                                                                                                                                                                                                             | 3                                                                  |
+| R2-11                                         | Single-use login transactions per web instance                                                              | Low                        | Already recorded (D-038)                                                                                                                                                                                                                          | 2 (PP-04)                                                          |
+| R2-12                                         | `/health/ready` unauthenticated, unlimited, queries the database                                            | Low                        | Recorded: expose only to the internal load balancer                                                                                                                                                                                               | 2 (PP-06)                                                          |
+| R2-13                                         | Malformed `X-Forwarded-For` falls back to the proxy's address                                               | Info                       | Accepted: fail-safe direction (shared, not spoofed, budget)                                                                                                                                                                                       | 3                                                                  |
+| R2-14                                         | NAT64 addresses collapse to one /64 key                                                                     | Info                       | Accepted                                                                                                                                                                                                                                          | 3                                                                  |
+| R2-15                                         | Suspending one tenant revokes the owner's sessions for all their tenants                                    | Info                       | Accepted by design: sessions are account-wide; a re-login restores the other tenants                                                                                                                                                              | 3                                                                  |
+| R2-16                                         | No way to deactivate an operator account                                                                    | Info                       | = E-05                                                                                                                                                                                                                                            | 2 (PP-09)                                                          |
+
+**Not verified by the reviewer either:**
+
+- real ZITADEL token shapes, and logout with `client_id` only;
+- multiple web replicas;
+- readiness under flood;
+- D-02 timings;
+- Firefox and Safari.
+
+**After the fixes,** all gates were re-run (STATUS.md "Phase 2 audit remediation → final
+verification").
 
 ## 25. Proposed final verdict
 
-_See below._
+**PASS WITH CONDITIONS.** This is also the verdict the independent reviewer proposed, with
+conditions that are now fulfilled.
+
+**Why not FAIL:**
+
+- Every Doc 05 Phase 2 exit criterion, including the owner account lifecycle the first
+  assessment missed, is implemented and verified by tests that reproduce the original defects
+  (§23).
+- No Phase 2 acceptance blocker remains: R2-02 is fixed and R2-17 is resolved.
+
+**Why not PASS:**
+
+- The authentication contract is verified against ZITADEL's source code, not against a real
+  tenant.
+- Several controls are instance-local.
+- The audit trail is not tamper-proof against the migration credential.
+- The runtime credential can mint sessions.
+- The same AI system wrote the audit, the remediation and the reviews.
+
+These are recorded as pre-production blockers (§22) and accepted residual risks (§21). The
+owner must accept them explicitly.
+
+**Conditions for accepting Phase 2:**
+
+1. The owner accepts the residual risks R-01 – R-08.
+2. PP-01 – PP-11 stay open as production gates (Phase 10), and none is treated as satisfied by
+   this phase.
+3. Formal closure is recorded by the owner. This report does not close Phase 2.

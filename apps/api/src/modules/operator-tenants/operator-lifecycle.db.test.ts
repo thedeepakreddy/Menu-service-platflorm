@@ -617,7 +617,7 @@ describe('uncertain outcomes after a lost connection are reconciled, never "reje
       const notApplied = lines
         .map((l) => JSON.parse(l) as Record<string, unknown>)
         .find((e) => e.operationId === second && e.phase === 'result');
-      expect(notApplied?.outcome).toBe('not_applied');
+      expect(notApplied?.outcome).toBe('not_applied_when_checked');
       expect(lines.join('\n')).not.toMatch(/"outcome":"rejected"[^\n]*lost/);
     } finally {
       await db.destroy();

@@ -435,9 +435,9 @@ describe('C-03: forged callbacks cannot amplify into provider token requests', (
     expect((await signIn('owner', { handlers: capped })).res.status).toBe(302);
   });
 
-  it('without trusted proxies, client addresses are not trusted (all share one budget)', async () => {
+  it('without trusted proxies, forwarded addresses are ignored and no shared per-client bucket exists (R2-04)', async () => {
     const direct = handlersFor(config({ trustedProxyHops: 0 }), {
-      limits: { perClientPerMinute: 2, globalPerMinute: 1000 },
+      limits: { perClientPerMinute: 1, globalPerMinute: 1000 },
     });
     const statuses = [];
     for (let i = 0; i < 3; i += 1) {
@@ -452,7 +452,27 @@ describe('C-03: forged callbacks cannot amplify into provider token requests', (
         ).status,
       );
     }
-    expect(statuses).toEqual([302, 302, 429]);
+    // Unknown clients are not lumped into one per-client bucket (one attacker would lock out
+    // everyone); only the global limit applies to them.
+    expect(statuses).toEqual([302, 302, 302]);
+  });
+
+  it('REPRODUCTION R2-02: requests refused per client never consume the global budget', async () => {
+    const limited = handlersFor(config(), {
+      limits: { perClientPerMinute: 2, globalPerMinute: 5 },
+    });
+    const from = (ip: string) =>
+      limited
+        .login(
+          new Request(`${ORIGIN}/auth/owner/login`, { headers: { 'x-forwarded-for': ip } }),
+          'owner',
+        )
+        .then((r) => r.status);
+    const attacker = [];
+    for (let i = 0; i < 60; i += 1) attacker.push(await from('203.0.113.66'));
+    expect(attacker.filter((st) => st === 302)).toHaveLength(2);
+    // Before the fix the attacker's 58 refused requests had used up the global budget too.
+    expect(await from('198.51.100.200')).toBe(302);
   });
 
   it('a provider outage is not retried on every request (discovery backoff)', async () => {

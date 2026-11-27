@@ -138,7 +138,7 @@ export class OperatorTenantsService {
         outcome,
         code: typeof code === 'string' ? code : 'error',
       });
-      if (isDatabaseUnavailable(error) || outcome !== 'not_applied') {
+      if (isDatabaseUnavailable(error) || outcome !== 'not_applied_when_checked') {
         throw new ServiceUnavailableException();
       }
       throw error;
@@ -153,14 +153,19 @@ export class OperatorTenantsService {
     return result;
   }
 
-  /** applied | not_applied | unknown — from the audit row, which commits with the change. */
+  /**
+   * From the audit row, which commits with the change. `not_applied_when_checked` is exact only
+   * once the original transaction has ended: a commit still in flight when the check runs can
+   * land afterwards (review R2-10). Clients resolve that with GET /operator/operations/:id later,
+   * and a retry with the same operation id can never apply twice.
+   */
   private async reconcile(
     principal: Principal,
     operationId: string,
-  ): Promise<'applied' | 'not_applied' | 'unknown'> {
+  ): Promise<'applied' | 'not_applied_when_checked' | 'unknown'> {
     try {
       const outcome = await this.outcome(principal, operationId);
-      return outcome.applied ? 'applied' : 'not_applied';
+      return outcome.applied ? 'applied' : 'not_applied_when_checked';
     } catch {
       return 'unknown';
     }

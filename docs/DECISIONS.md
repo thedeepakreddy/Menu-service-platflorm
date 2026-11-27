@@ -1142,9 +1142,20 @@ those shapes.
 
 - The BFF credential is a shared static secret. Rotating it requires restarting both apps;
   mTLS or a signed client assertion would be stronger.
-- The database trusts the API's token verification: anyone holding the `app_runtime` credential
-  can call `session_create` for an existing account. Acting as an operator additionally
-  requires the `app_operator` credential (see D-035).
+- **The database trusts the API's token verification (independent review R2-01).**
+  `session_create` takes the identity, the MFA flag and `auth_time` from its caller. The
+  `app_runtime` credential **alone** can therefore mint a session, including an MFA operator
+  session, for any existing active account.
+  - Acting as an operator then needs the separately held `app_operator` credential as well.
+  - B-03 is therefore **strengthened but not eliminated**: the caller can no longer simply name
+    an operator id; forging an operator action needs both credentials.
+  - A database that verifies the provider's signature itself (or a signed assertion from the
+    API) would be required to close it fully (residual risk R-04).
+- **The session hash is the credential at the database layer (R2-06).** The operator
+  functions accept the stored SHA-256, so anyone who can read `app.sessions` (only `app_definer`
+  or a superuser) holds live session credentials. "Only a hash is stored" protects the HTTP
+  token against a leak of the table to readers without those privileges; it does not protect
+  against a database superuser.
 - The provider-side SSO session can outlive a local revocation until its own expiry. Back-channel
   logout is supported by ZITADEL but not implemented (pre-production item PP-07).
 
@@ -1210,10 +1221,18 @@ function defaults, append-only audit, startup allowlist, migration identity
 
 **Limitations (accepted, recorded).**
 
-- `app_owner` remains the DDL authority. A migration could drop triggers or policies, or
-  `SET ROLE app_definer`. This is mitigated by review, the CI catalog test and the migration
-  identity check, not prevented. True append-only audit needs the shipped log (G-32,
-  pre-production item PP-05).
+- `app_owner` remains the DDL authority (residual risk R-03).
+  - It can **erase the audit trail in three statements without dropping anything** (independent
+    review R2-08): `ALTER TABLE … DISABLE TRIGGER`, `GRANT TRUNCATE` to itself, then `TRUNCATE`.
+  - It can also alter policies or `SET ROLE app_definer`. Since migration 0007 (review R2-07),
+    the definer can no longer **create** objects, so a view or function created that way is
+    refused.
+  - The in-database audit is append-only against every **application** path. It is **not**
+    tamper-proof against the migration credential. This is mitigated by review, the CI catalog
+    test (which also requires the triggers to be enabled) and the migration identity check, not
+    prevented.
+  - True append-only audit needs the shipped log (G-32, pre-production item PP-05). The
+    migration credential must be held more tightly than the runtime credentials (D-029).
 - Foreign-key checks against `operator_audit` mean tenants and accounts cannot be deleted (they
   are never deleted; they are retired or deactivated).
 - Production role provisioning is not in the repository (D-029, G-09). The provisioning steps in
@@ -1283,6 +1302,15 @@ The D-031 limits are unchanged.
   - IPv6 is keyed by `/64` (D-04, D-05).
 - **Memory.** Insertion-ordered table with O(1) amortised eviction. Fail closed when full of
   live keys. The capacity `Retry-After` comes from the oldest window (D-03, D-06).
+- **Fail-closed capacity (review R2-03).** When the 50,000-key table is full of live keys,
+  every **new** client in every group is refused until windows expire. About 12,500 IPv6 /64s
+  are enough (one /48 holds 65,536). This is a deliberate fail-closed choice (failing open would
+  let address rotation bypass every limit), but it is a denial-of-service lever. An edge
+  limiter is required (PP-04).
+- **Behind the BFF without a forwarded address (review R2-04),** every browser shares the BFF's
+  key for the `session` and `owner` groups. The web side therefore requires
+  `WEB_TRUSTED_PROXY_HOPS` to be set explicitly in staging and production. A wrong hops value
+  lets a client choose the forwarded address; this is a deployment responsibility (PP-04).
 - **Not distributed (recorded honestly).** Limits are per instance. N instances allow N × limit,
   and limits reset on restart. An edge or shared-store limiter is required before more than
   one instance (pre-production item PP-04).
@@ -1295,9 +1323,14 @@ The D-031 limits are unchanged.
 amplification; mutation M-12.
 **Decision.**
 
-1. **Per-client limit** on `/auth/<kind>/login` and `/callback`: 30/min. The client address
-   comes from `X-Forwarded-For` only with `WEB_TRUSTED_PROXY_HOPS` > 0. Next.js keeps a
-   client-supplied header, so a directly exposed server trusts none.
+1. **Per-client limit** on `/auth/<kind>/login` and `/callback`: 30/min, checked **before** the
+   global limit, so refused requests never consume the shared budget (independent review
+   R2-02).
+   - The client address comes from `X-Forwarded-For` only with `WEB_TRUSTED_PROXY_HOPS` > 0.
+     Next.js keeps a client-supplied header, so a directly exposed server trusts none.
+   - Clients with an unknown address are not put in one shared bucket (that would let one
+     attacker lock everyone out); only the global limit applies to them.
+   - `WEB_TRUSTED_PROXY_HOPS` must be set explicitly in staging and production (R2-04).
 2. **Global per-instance limit** on the same routes: 1200/min.
 3. **Global cap on outbound token requests:** `WEB_TOKEN_REQUESTS_PER_MINUTE`, default 600 =
    10/s per instance, below ZITADEL Cloud's 50 req/s per IP.
@@ -1307,7 +1340,10 @@ amplification; mutation M-12.
    exactly one well-formed `code` (8–512 printable ASCII), no `error`.
 6. **Discovery failures** back off for 30 s.
 
-**Limitations.** These are per instance. The single-use set is per instance, so with several web
+**Limitations.** A distributed flood can still exhaust the global limit (it bounds provider
+traffic; it cannot tell legitimate users from attackers without client identity). An edge limiter
+with real client addresses is required (PP-04). These controls are per instance. The single-use
+set is per instance, so with several web
 instances a login cookie could be redeemed once per instance. The API's ID-token replay table
 still allows only one session per login, and the global caps still bound provider traffic
 (pre-production item PP-04).

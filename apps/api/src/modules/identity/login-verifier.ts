@@ -112,6 +112,14 @@ async function verifyJwt(
     return { payload, alg: protectedHeader.alg };
   } catch (error) {
     if (error instanceof errors.JWKSTimeout) throw new ProviderUnavailableError('JWKS timeout');
+    // A JWKS endpoint answering non-200 or unparseable content (review R2-09) is an outage of
+    // the provider, not a bad token. jose reports both as a generic JOSEError or JWKSInvalid.
+    if (
+      error instanceof errors.JWKSInvalid ||
+      (error instanceof errors.JOSEError && error.code === 'ERR_JOSE_GENERIC')
+    ) {
+      throw new ProviderUnavailableError('JWKS unusable');
+    }
     // Every verification failure is "not authenticated".
     if (error instanceof errors.JOSEError) return undefined;
     // A JWKS fetch that could not connect surfaces as a fetch TypeError.

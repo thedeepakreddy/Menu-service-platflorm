@@ -68,6 +68,9 @@ describe('no transaction control inside a migration (audit A-05)', () => {
     ['SAVEPOINT', 'SAVEPOINT s1;'],
     ['SET ROLE', 'SET ROLE app_definer;'],
     ['SET SESSION AUTHORIZATION', 'SET SESSION AUTHORIZATION app_definer;'],
+    // Review R2-05: an escape string hiding the quote, and a role switch through set_config.
+    ['COMMIT after an E-string', "SELECT E'\\''; CREATE TABLE app.half_applied (id int); COMMIT;"],
+    ['set_config(role)', "SELECT set_config('role', 'app_definer', false);"],
   ])('refuses a file containing %s and applies nothing', async (_name, text) => {
     const dir = withExtra({ '9998_bad.sql': text });
     await expect(migrate(ownerUrl, dir)).rejects.toBeInstanceOf(MigrationError);

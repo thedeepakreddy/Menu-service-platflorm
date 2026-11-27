@@ -63,9 +63,12 @@ export function topLevelSql(text: string): string {
     }
     const ch = text.charAt(i);
     if (ch === "'" || ch === '"') {
+      // E'...' strings treat backslash as an escape (review R2-05: `E'\''` hid a COMMIT).
+      const escapes = ch === "'" && i > 0 && /[eE]/.test(text.charAt(i - 1));
       let j = i + 1;
       while (j < text.length) {
-        if (text.charAt(j) === ch) {
+        if (escapes && text.charAt(j) === '\\') j += 2;
+        else if (text.charAt(j) === ch) {
           if (text.charAt(j + 1) === ch) j += 2;
           else break;
         } else j += 1;
@@ -83,9 +86,16 @@ export function topLevelSql(text: string): string {
 const FORBIDDEN_STATEMENT =
   /(^|;)\s*(COMMIT|ROLLBACK|ABORT|BEGIN|START\s+TRANSACTION|END|SAVEPOINT|RELEASE|PREPARE\s+TRANSACTION|SET\s+(SESSION\s+|LOCAL\s+)?ROLE|RESET\s+ROLE|SET\s+(SESSION\s+)?SESSION\s+AUTHORIZATION|RESET\s+SESSION\s+AUTHORIZATION)\b/i;
 
+// A role or authorization switch through the settings function (review R2-05), outside comments.
+const FORBIDDEN_SETTING = /set_config\s*\(\s*'(role|session_authorization)'/i;
+
 /** Throws if a migration file contains top-level transaction control or a role switch. */
 export function assertNoTransactionControl(name: string, text: string): void {
-  if (FORBIDDEN_STATEMENT.test(topLevelSql(text))) {
+  const sql = topLevelSql(text);
+  // set_config takes the setting name as a string literal, which topLevelSql blanks out, so the
+  // role-switch check runs on the text with only comments removed.
+  const withoutComments = text.replace(/--[^\n]*/g, ' ').replace(/\/\*[\s\S]*?\*\//g, ' ');
+  if (FORBIDDEN_STATEMENT.test(sql) || FORBIDDEN_SETTING.test(withoutComments)) {
     throw new MigrationError(
       `migration ${name} contains transaction control or a role switch, which is not allowed`,
     );
@@ -196,11 +206,16 @@ export async function migrate(connectionString: string, dir: string): Promise<Mi
         // marker is gone afterwards and the runner refuses to record the migration.
         await client.query("SELECT set_config('migrations.guard', $1, true)", [migration.name]);
         await client.query(migration.sql);
-        const guard = await client.query<{ guard: string | null }>(
-          "SELECT current_setting('migrations.guard', true) AS guard",
+        const guard = await client.query<{ guard: string | null; role_ok: boolean }>(
+          `SELECT current_setting('migrations.guard', true) AS guard,
+                  current_user = session_user AS role_ok`,
         );
-        if (guard.rows[0]?.guard !== migration.name) {
+        const check = guard.rows[0];
+        if (check?.guard !== migration.name) {
           throw new MigrationError(`migration ${migration.name} ended the runner's transaction`);
+        }
+        if (!check.role_ok) {
+          throw new MigrationError(`migration ${migration.name} left a switched role behind`);
         }
         await client.query('INSERT INTO migrations.applied (name, checksum) VALUES ($1, $2)', [
           migration.name,
