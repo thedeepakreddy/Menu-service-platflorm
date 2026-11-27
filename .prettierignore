@@ -7,3 +7,6 @@ test-results/
 playwright-report/
 docs/specifications/
 tests/architecture/fixtures/
+
+# Preserved verbatim as audit evidence (SHA-256 recorded in docs/architecture/phase-2-remediation-plan.md).
+docs/audit/phase-2-independent-audit-report.md

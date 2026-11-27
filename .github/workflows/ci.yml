@@ -73,6 +73,10 @@ jobs:
         run: pnpm test:db
 
       - name: Provision the e2e database
+        # Seeds the synthetic owner that the browser login test signs in as (local test provider).
+        env:
+          E2E_SEED_OWNER_ISSUER: https://127.0.0.1:39443
+          E2E_SEED_OWNER_SUBJECT: user-1
         run: node apps/api/test/db/provision-cli.ts platform_e2e
 
       - name: Install Playwright Chromium

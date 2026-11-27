@@ -245,6 +245,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@platform/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       jose:
         specifier: ^6.2.18
         version: 6.2.18

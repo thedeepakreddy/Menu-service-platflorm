@@ -1,13 +1,13 @@
 import { z } from 'zod';
 
 /**
- * Web runtime configuration (decisions P-107, D-030, D-033). Validated when Next.js loads
+ * Web runtime configuration (decisions P-107, D-030, D-034, D-038). Validated when Next.js loads
  * next.config.ts, i.e. on `next dev`, `next build` and `next start`. Error output names variables,
  * never values.
  *
  * Login (M2.6) is optional per trust domain: an unconfigured domain's login routes answer 404
- * (fail closed). A configured domain needs all its variables, plus WEB_PUBLIC_ORIGIN and
- * WEB_SESSION_SECRET. Staging and production require https for the origin and the issuers.
+ * (fail closed). A configured domain needs all its variables, plus WEB_PUBLIC_ORIGIN,
+ * WEB_SESSION_SECRET, WEB_API_ORIGIN and WEB_API_BFF_CREDENTIAL. Staging and production require https for the origin and the issuers.
  */
 const PRODUCTION_LIKE = new Set(['staging', 'production']);
 
@@ -25,11 +25,20 @@ const exactOrigin = httpUrl.refine(
   'must be an exact origin',
 );
 
-/** At least 32 random bytes, base64url-encoded (the A256GCM session key, D-033). Secret. */
+/**
+ * Exactly 32 random bytes, base64url without padding (43 characters): the A256GCM key that seals
+ * the short-lived login-transaction cookie (D-034). Secret. A passphrase or a hex string is
+ * refused rather than silently truncated (audit C-10).
+ */
 const sessionSecret = z
   .string()
-  .regex(/^[A-Za-z0-9_-]+$/)
-  .refine((value) => Buffer.from(value, 'base64url').length >= 32, 'must encode at least 32 bytes');
+  .regex(/^[A-Za-z0-9_-]{43}$/, 'must be 32 random bytes, base64url without padding')
+  .refine((value) => Buffer.from(value, 'base64url').length === 32, 'must encode 32 bytes');
+
+/** The credential the BFF presents to the API (D-034). Secret. */
+const bffCredential = z
+  .string()
+  .regex(/^[A-Za-z0-9_-]{43,128}$/, 'must be 43-128 base64url characters');
 
 export const LOGIN_KINDS = ['OWNER', 'OPERATOR'] as const;
 const PROVIDER_FIELDS = ['ISSUER', 'CLIENT_ID', 'CLIENT_SECRET'] as const;
@@ -48,6 +57,17 @@ export const webEnvSchema = z
     WEB_OPERATOR_OIDC_CLIENT_ID: z.string().min(1).max(500).optional(),
     WEB_OPERATOR_OIDC_CLIENT_SECRET: z.string().min(1).max(2000).optional(),
     WEB_OPERATOR_OIDC_SCOPES: z.string().max(1000).default(''),
+    /** Server-to-server API origin used by the BFF (D-034). Required when login is configured. */
+    WEB_API_ORIGIN: exactOrigin.optional(),
+    /** SECRET (D-034). Must equal the API's API_BFF_CREDENTIAL. */
+    WEB_API_BFF_CREDENTIAL: bffCredential.optional(),
+    /**
+     * Number of trusted reverse proxies in front of the web app that append to X-Forwarded-For
+     * (D-038). 0 = none: the per-address login limits then fall back to global limits only.
+     */
+    WEB_TRUSTED_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
+    /** Global cap on token requests to the identity provider per instance and minute (C-03). */
+    WEB_TOKEN_REQUESTS_PER_MINUTE: z.coerce.number().int().min(1).max(3000).default(600),
   })
   .superRefine((env, ctx) => {
     let anyLogin = false;
@@ -77,7 +97,12 @@ export const webEnvSchema = z
       }
     }
     if (!anyLogin) return;
-    for (const name of ['WEB_PUBLIC_ORIGIN', 'WEB_SESSION_SECRET'] as const) {
+    for (const name of [
+      'WEB_PUBLIC_ORIGIN',
+      'WEB_SESSION_SECRET',
+      'WEB_API_ORIGIN',
+      'WEB_API_BFF_CREDENTIAL',
+    ] as const) {
       if (env[name] === undefined) {
         ctx.addIssue({
           code: 'custom',
@@ -92,6 +117,13 @@ export const webEnvSchema = z
       !env.WEB_PUBLIC_ORIGIN.startsWith('https://')
     ) {
       ctx.addIssue({ code: 'custom', path: ['WEB_PUBLIC_ORIGIN'], message: 'must use https' });
+    }
+    if (
+      env.WEB_API_ORIGIN !== undefined &&
+      PRODUCTION_LIKE.has(env.APP_ENV) &&
+      !env.WEB_API_ORIGIN.startsWith('https://')
+    ) {
+      ctx.addIssue({ code: 'custom', path: ['WEB_API_ORIGIN'], message: 'must use https' });
     }
   });
 

@@ -48,22 +48,27 @@ describe('in-process pool (B-01)', () => {
   it('a query whose connection is terminated mid-flight fails as "unavailable"; a retry succeeds', async () => {
     const db = createDatabase({ connectionString: runtimeUrl, maxConnections: 1 });
     try {
-      const slow = sql`SELECT pg_sleep(5)`.execute(db);
-      await new Promise((r) => setTimeout(r, 300));
-      await killBackends('app_runtime');
-      const error = await slow.then(
+      // Handlers are attached immediately, so the rejection is never "unhandled".
+      const slow = sql`SELECT pg_sleep(5)`.execute(db).then(
         () => undefined,
         (e: unknown) => e,
       );
+      await new Promise((r) => setTimeout(r, 300));
+      await killBackends('app_runtime');
+      const error = await slow;
       expect(isDatabaseUnavailable(error)).toBe(true);
       let calls = 0;
       const value = await withReadRetry(async () => {
         calls += 1;
         if (calls === 1) {
-          const pending = sql`SELECT pg_sleep(5)`.execute(db);
+          const pending = sql`SELECT pg_sleep(5)`.execute(db).then(
+            () => undefined,
+            (e: unknown) => e,
+          );
           await new Promise((r) => setTimeout(r, 300));
           await killBackends('app_runtime');
-          await pending;
+          const failure = await pending;
+          if (failure !== undefined) throw failure;
         }
         return (await sql<{ ok: number }>`SELECT 1 AS ok`.execute(db)).rows[0]?.ok;
       });

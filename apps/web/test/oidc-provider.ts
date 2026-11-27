@@ -27,6 +27,8 @@ export type TestFetch = (
 
 export type TestProvider = {
   issuer: string;
+  /** PEM of the throwaway TLS certificate (for NODE_EXTRA_CA_CERTS in e2e). */
+  certPem: string;
   /** Fetch that trusts only this provider's throwaway certificate; never follows redirects. */
   fetch: TestFetch;
   behaviour: ProviderBehaviour;
@@ -42,7 +44,12 @@ export async function startTestProvider(client: {
   clientSecret: string;
   redirectUri: string;
   postLogoutRedirectUri: string;
+  /** The API audience (ZITADEL: the project id), present in both tokens' aud. */
+  apiAudience?: string;
+  /** Fixed port (e2e); default: any free port. */
+  port?: number;
 }): Promise<TestProvider> {
+  const apiAudience = client.apiAudience ?? 'platform-api';
   const { privateKey, publicKey } = await generateKeyPair('RS256');
   const jwk = { ...(await exportJWK(publicKey)), kid: 'k1', alg: 'RS256', use: 'sig' };
   const grants = new Map<string, Grant>();
@@ -105,6 +112,19 @@ export async function startTestProvider(client: {
         code_challenge_methods_supported: ['S256'],
         token_endpoint_auth_methods_supported: ['client_secret_basic', 'client_secret_post'],
       });
+      return;
+    }
+    if (url.pathname === '/end_session') {
+      const back = url.searchParams.get('post_logout_redirect_uri');
+      if (
+        back !== client.postLogoutRedirectUri ||
+        url.searchParams.get('client_id') !== client.clientId
+      ) {
+        json(400, { error: 'invalid_request' });
+        return;
+      }
+      res.writeHead(302, { location: back });
+      res.end();
       return;
     }
     if (url.pathname === '/keys') {
@@ -178,25 +198,36 @@ export async function startTestProvider(client: {
           }
           grant.used = true; // single use
           const now = Math.floor(Date.now() / 1000);
-          const sign = (claims: Record<string, unknown>, aud: string) =>
+          // Token shapes follow ZITADEL's (docs/architecture/spikes/zitadel-token-contract.md):
+          // both tokens' aud = [client, project]; the ID token has azp, nonce, at_hash, sid,
+          // amr, auth_time; the JWT access token has client_id and jti only.
+          const sign = (claims: Record<string, unknown>) =>
             new SignJWT(claims)
-              .setProtectedHeader({ alg: 'RS256', kid: 'k1' })
+              .setProtectedHeader({ alg: 'RS256', kid: 'k1', typ: 'JWT' })
               .setIssuer(issuer)
               .setSubject(behaviour.subject)
-              .setAudience(aud)
+              .setAudience([client.clientId, apiAudience])
               .setIssuedAt(now)
               .setExpirationTime(now + behaviour.expiresIn)
               .sign(privateKey);
-          const idToken = await sign(
-            {
-              nonce: behaviour.nonceOverride ?? grant.nonce,
-              amr: behaviour.amr,
-              auth_time: now + behaviour.authTimeOffsetSeconds,
-              azp: client.clientId,
-            },
-            client.clientId,
-          );
-          const accessToken = await sign({}, 'platform-api');
+          const accessToken = await sign({
+            client_id: client.clientId,
+            jti: randomBytes(8).toString('hex'),
+          });
+          const atHash = createHash('sha256')
+            .update(accessToken)
+            .digest()
+            .subarray(0, 16)
+            .toString('base64url');
+          const idToken = await sign({
+            nonce: behaviour.nonceOverride ?? grant.nonce,
+            amr: behaviour.amr,
+            auth_time: now + behaviour.authTimeOffsetSeconds,
+            azp: client.clientId,
+            client_id: client.clientId,
+            at_hash: atHash,
+            sid: 'test-sid',
+          });
           json(200, {
             access_token: accessToken,
             id_token: idToken,
@@ -209,7 +240,7 @@ export async function startTestProvider(client: {
     }
     json(404, { error: 'not_found' });
   });
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  await new Promise<void>((resolve) => server.listen(client.port ?? 0, '127.0.0.1', resolve));
   issuer = `https://127.0.0.1:${String((server.address() as AddressInfo).port)}`;
   const fetchTls: TestFetch = (url, options = {}) =>
     new Promise((resolve, reject) => {
@@ -257,6 +288,7 @@ export async function startTestProvider(client: {
     });
   return {
     issuer,
+    certPem: tls.cert.toString(),
     fetch: fetchTls,
     behaviour,
     tokenRequests,

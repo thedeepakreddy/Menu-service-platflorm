@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@platform/contracts": "workspace:*",
     "jose": "^6.2.18",
     "next": "^16.0.0",
     "openid-client": "^6.9.0",
