@@ -1,12 +1,14 @@
 /**
- * In-process fixed-window rate limiter (decision D-031).
+ * In-process fixed-window rate limiter (decisions D-031, D-037).
  *
  * INSTANCE-LOCAL: each API process counts independently. With N instances a client can make up to
  * N × limit requests per window. This is not distributed enforcement; an edge or shared-store
- * limit is required before running more than one instance (D-031, Phase 10).
+ * limit is required before running more than one instance (pre-production blocker, D-037).
  *
- * Memory is bounded by `maxKeys`. When the table is full of live (unexpired) keys, a NEW key is
- * refused — fail closed — because failing open would let an attacker bypass every limit simply by
+ * Memory is bounded by `maxKeys`. Eviction is O(1) amortised (audit D-03): windows are kept in
+ * insertion order (a key whose window restarts is re-inserted at the end), so expired windows
+ * collect at the head and are dropped from there. When the table is full of live keys, a NEW key
+ * is refused — fail closed — because failing open would let an attacker bypass every limit by
  * rotating source addresses. Existing keys keep their own budgets.
  */
 export type RateLimitPolicy = {
@@ -41,11 +43,11 @@ export class RateLimiter {
       window = undefined;
     }
     if (window === undefined) {
-      if (this.windows.size >= this.maxKeys) this.evictExpired(now);
+      this.evictExpiredHead(now);
       if (this.windows.size >= this.maxKeys) {
         return {
           allowed: false,
-          retryAfterSeconds: Math.ceil(policy.windowMs / 1000),
+          retryAfterSeconds: this.capacityRetryAfter(now),
           reason: 'capacity',
         };
       }
@@ -68,9 +70,18 @@ export class RateLimiter {
     return this.windows.size;
   }
 
-  private evictExpired(now: number): void {
+  /** Drops expired windows from the head of the insertion order; stops at the first live one. */
+  private evictExpiredHead(now: number): void {
     for (const [key, window] of this.windows) {
-      if (window.resetAt <= now) this.windows.delete(key);
+      if (window.resetAt > now) return;
+      this.windows.delete(key);
     }
+  }
+
+  /** When the table is full: the time until the oldest window frees its slot (audit D-06). */
+  private capacityRetryAfter(now: number): number {
+    const first = this.windows.values().next();
+    const resetAt = first.done === true ? now : first.value.resetAt;
+    return Math.max(1, Math.ceil((resetAt - now) / 1000));
   }
 }

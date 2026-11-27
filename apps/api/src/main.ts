@@ -5,7 +5,6 @@ import { parseApiEnv, PRODUCTION_LIKE } from './env.js';
 import { assertSafeRuntimeRole, createDatabase } from './infrastructure/database/database.js';
 import { JsonLogger } from './logging/json-logger.js';
 import { redactString } from './logging/redact.js';
-import { createIdentityVerifier } from './modules/identity/index.js';
 import type { IdentityConfig } from './modules/identity/index.js';
 
 async function main(): Promise<void> {
@@ -34,8 +33,8 @@ async function main(): Promise<void> {
           maxConnections: 2,
         });
   try {
-    await assertSafeRuntimeRole(db);
-    if (operatorDb !== undefined) await assertSafeRuntimeRole(operatorDb);
+    await assertSafeRuntimeRole(db, 'runtime');
+    if (operatorDb !== undefined) await assertSafeRuntimeRole(operatorDb, 'operator');
   } catch (error) {
     const message = error instanceof Error ? error.message : 'unknown error';
     process.stderr.write(`Database check failed; refusing to start: ${redactString(message)}\n`);
@@ -45,37 +44,36 @@ async function main(): Promise<void> {
   }
 
   const env = parsed.env;
-  const identity: IdentityConfig = {};
-  if (env.API_OWNER_OIDC_ISSUER && env.API_OWNER_OIDC_AUDIENCE && env.API_OWNER_OIDC_JWKS_URL) {
-    identity.owner = createIdentityVerifier({
+  const identity: IdentityConfig = { bffCredential: env.API_BFF_CREDENTIAL };
+  if (
+    env.API_OWNER_OIDC_ISSUER &&
+    env.API_OWNER_OIDC_AUDIENCE &&
+    env.API_OWNER_OIDC_JWKS_URL &&
+    env.API_OWNER_OIDC_CLIENT_ID
+  ) {
+    identity.owner = {
       issuer: env.API_OWNER_OIDC_ISSUER,
-      audience: env.API_OWNER_OIDC_AUDIENCE,
+      apiAudience: env.API_OWNER_OIDC_AUDIENCE,
+      clientId: env.API_OWNER_OIDC_CLIENT_ID,
       keys: createRemoteJWKSet(new URL(env.API_OWNER_OIDC_JWKS_URL)),
-    });
+      idleSeconds: env.API_OWNER_SESSION_IDLE_SECONDS,
+    };
   }
   if (
     env.API_OPERATOR_OIDC_ISSUER &&
     env.API_OPERATOR_OIDC_AUDIENCE &&
-    env.API_OPERATOR_OIDC_JWKS_URL
+    env.API_OPERATOR_OIDC_JWKS_URL &&
+    env.API_OPERATOR_OIDC_CLIENT_ID
   ) {
-    const keys = createRemoteJWKSet(new URL(env.API_OPERATOR_OIDC_JWKS_URL));
-    const proofAudience = env.API_OPERATOR_OIDC_PROOF_AUDIENCE;
-    // D-033: MFA is proven by the ID token when the provider keeps amr out of access tokens.
-    identity.operator = createIdentityVerifier({
+    // D-034: operator MFA is verified once, from the ID token at login, and bounds the session.
+    identity.operator = {
       issuer: env.API_OPERATOR_OIDC_ISSUER,
-      audience: env.API_OPERATOR_OIDC_AUDIENCE,
-      keys,
-      requireMfa: proofAudience === undefined,
-    });
-    if (proofAudience !== undefined) {
-      identity.operatorProof = createIdentityVerifier({
-        issuer: env.API_OPERATOR_OIDC_ISSUER,
-        audience: proofAudience,
-        keys,
-        requireMfa: true,
-        maxAuthAgeSeconds: env.API_OPERATOR_MFA_MAX_AGE_SECONDS,
-      });
-    }
+      apiAudience: env.API_OPERATOR_OIDC_AUDIENCE,
+      clientId: env.API_OPERATOR_OIDC_CLIENT_ID,
+      keys: createRemoteJWKSet(new URL(env.API_OPERATOR_OIDC_JWKS_URL)),
+      mfaMaxAgeSeconds: env.API_OPERATOR_MFA_MAX_AGE_SECONDS,
+      idleSeconds: env.API_OPERATOR_SESSION_IDLE_SECONDS,
+    };
   }
 
   const app = await createApp({
@@ -85,6 +83,7 @@ async function main(): Promise<void> {
     hsts: PRODUCTION_LIKE.has(APP_ENV),
     database: db,
     operatorDatabase: operatorDb,
+    trustedProxies: env.API_TRUSTED_PROXIES,
   });
   await app.listen(API_PORT, API_HOST);
 }

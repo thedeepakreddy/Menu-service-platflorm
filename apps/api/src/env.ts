@@ -1,3 +1,5 @@
+import { isIP } from 'node:net';
+
 import { z } from 'zod';
 
 /**
@@ -53,9 +55,36 @@ const httpUrl = z.string().refine((value) => {
   }
 }, 'must be an http(s) URL');
 
-/** One OIDC trust domain (D-025): all three variables together, or none. */
+/** One OIDC trust domain (D-025, D-034): all four variables together, or none. */
 const OIDC_DOMAINS = ['OWNER', 'OPERATOR'] as const;
-const OIDC_FIELDS = ['ISSUER', 'AUDIENCE', 'JWKS_URL'] as const;
+const OIDC_FIELDS = ['ISSUER', 'AUDIENCE', 'JWKS_URL', 'CLIENT_ID'] as const;
+
+/** A high-entropy shared secret: at least 256 bits as base64url (43+ characters). */
+const sharedSecret = z
+  .string()
+  .regex(/^[A-Za-z0-9_-]{43,128}$/, 'must be 43-128 base64url characters');
+
+/** Comma-separated exact IP addresses or CIDR ranges (D-037). */
+const trustedProxyList = z
+  .string()
+  .transform((raw) =>
+    raw
+      .split(',')
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0),
+  )
+  .refine(
+    (entries) =>
+      entries.every((entry) => {
+        const [address = '', prefix] = entry.split('/');
+        const family = isIP(address);
+        if (family === 0) return false;
+        if (prefix === undefined) return true;
+        const bits = Number(prefix);
+        return /^\d{1,3}$/.test(prefix) && bits >= 0 && bits <= (family === 4 ? 32 : 128);
+      }),
+    { message: 'must be a comma-separated list of IP addresses or CIDR ranges' },
+  );
 
 const corsOriginList = z
   .string()
@@ -88,22 +117,31 @@ export const apiEnvSchema = z
     /** Optional. Maximum pooled database connections; defaults to 10. */
     API_DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
     /**
-     * Owner and operator OIDC trust domains (D-025). Optional in development and test (routes
-     * of an unconfigured domain fail closed); required in staging and production.
+     * Owner and operator OIDC trust domains (D-025, D-034). Optional in development and test
+     * (an unconfigured domain cannot log in); required in staging and production. AUDIENCE is the
+     * API audience (in the access token's `aud`); CLIENT_ID is the web BFF client (the ID token's
+     * `aud`/`azp` and the access token's `client_id`).
      */
     API_OWNER_OIDC_ISSUER: httpUrl.optional(),
     API_OWNER_OIDC_AUDIENCE: z.string().min(1).max(500).optional(),
     API_OWNER_OIDC_JWKS_URL: httpUrl.optional(),
+    API_OWNER_OIDC_CLIENT_ID: z.string().min(1).max(500).optional(),
     API_OPERATOR_OIDC_ISSUER: httpUrl.optional(),
     API_OPERATOR_OIDC_AUDIENCE: z.string().min(1).max(500).optional(),
     API_OPERATOR_OIDC_JWKS_URL: httpUrl.optional(),
+    API_OPERATOR_OIDC_CLIENT_ID: z.string().min(1).max(500).optional(),
+    /** Operator MFA freshness (D-034): an operator session ends this long after the MFA login. */
+    API_OPERATOR_MFA_MAX_AGE_SECONDS: z.coerce.number().int().min(60).max(3600).default(3600),
+    /** Idle timeouts of server-side sessions (D-034), renewed on use. */
+    API_OWNER_SESSION_IDLE_SECONDS: z.coerce.number().int().min(60).max(28_800).default(1800),
+    API_OPERATOR_SESSION_IDLE_SECONDS: z.coerce.number().int().min(60).max(3600).default(900),
     /**
-     * Optional (D-033). The operator WEB client id: when set, operator MFA is proven by the ID
-     * token sent in X-Authentication-Proof (amr contains mfa, auth_time within
-     * API_OPERATOR_MFA_MAX_AGE_SECONDS) instead of by the access token's amr.
+     * SECRET (D-034). The credential the web BFF presents on every authenticated API call.
+     * Required whenever a login domain is configured.
      */
-    API_OPERATOR_OIDC_PROOF_AUDIENCE: z.string().min(1).max(500).optional(),
-    API_OPERATOR_MFA_MAX_AGE_SECONDS: z.coerce.number().int().min(60).max(86_400).default(3600),
+    API_BFF_CREDENTIAL: sharedSecret.optional(),
+    /** Optional (D-037). Reverse proxies whose X-Forwarded-For is trusted; default none. */
+    API_TRUSTED_PROXIES: trustedProxyList.default([]),
   })
   .superRefine((env, ctx) => {
     for (const domain of OIDC_DOMAINS) {
@@ -130,11 +168,29 @@ export const apiEnvSchema = z
           'owner and operator must be separate trust domains (issuer or audience must differ)',
       });
     }
+    const anyDomain = OIDC_DOMAINS.some((d) => env[`API_${d}_OIDC_ISSUER`] !== undefined);
+    if (anyDomain && env.API_BFF_CREDENTIAL === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['API_BFF_CREDENTIAL'],
+        message: 'is required when a login domain is configured',
+      });
+    }
+    if (
+      env.API_OWNER_OIDC_CLIENT_ID !== undefined &&
+      env.API_OWNER_OIDC_CLIENT_ID === env.API_OPERATOR_OIDC_CLIENT_ID
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['API_OPERATOR_OIDC_CLIENT_ID'],
+        message: 'owner and operator must use different web clients',
+      });
+    }
     if (!PRODUCTION_LIKE.has(env.APP_ENV)) return;
     for (const domain of OIDC_DOMAINS) {
       for (const f of OIDC_FIELDS) {
         const value = env[`API_${domain}_OIDC_${f}`];
-        const mustBeHttps = f !== 'AUDIENCE';
+        const mustBeHttps = f === 'ISSUER' || f === 'JWKS_URL';
         if (value === undefined || (mustBeHttps && !value.startsWith('https://'))) {
           ctx.addIssue({
             code: 'custom',

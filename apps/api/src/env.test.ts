@@ -6,21 +6,26 @@ import { parseApiEnv } from './env.js';
 const DB_URL = 'postgres://app_runtime:synthetic@db.internal:5432/platform?sslmode=require';
 const OPERATOR_DB_URL =
   'postgres://app_operator:synthetic@db.internal:5432/platform?sslmode=require';
-// Synthetic OIDC trust domains (required in staging/production, D-025).
+// Synthetic OIDC trust domains (required in staging/production, D-025, D-034).
 const OIDC = {
   API_OWNER_OIDC_ISSUER: 'https://owners.idp.example',
   API_OWNER_OIDC_AUDIENCE: 'platform-owner-api',
   API_OWNER_OIDC_JWKS_URL: 'https://owners.idp.example/jwks',
+  API_OWNER_OIDC_CLIENT_ID: 'owner-web',
   API_OPERATOR_OIDC_ISSUER: 'https://operators.idp.example',
   API_OPERATOR_OIDC_AUDIENCE: 'platform-operator-api',
   API_OPERATOR_OIDC_JWKS_URL: 'https://operators.idp.example/jwks',
+  API_OPERATOR_OIDC_CLIENT_ID: 'operator-web',
 };
+// Synthetic BFF credential (43 base64url characters); not a secret.
+const BFF = 'synthetic-bff-credential-not-a-secret-000000';
 const valid = {
   APP_ENV: 'test',
   API_HOST: '127.0.0.1',
   API_PORT: '4000',
   API_DATABASE_URL: DB_URL,
   API_OPERATOR_DATABASE_URL: OPERATOR_DB_URL,
+  API_BFF_CREDENTIAL: BFF,
   ...OIDC,
 };
 
@@ -38,6 +43,10 @@ describe('parseApiEnv', () => {
         API_DATABASE_URL: DB_URL,
         API_DATABASE_POOL_MAX: 10,
         API_OPERATOR_MFA_MAX_AGE_SECONDS: 3600,
+        API_OWNER_SESSION_IDLE_SECONDS: 1800,
+        API_OPERATOR_SESSION_IDLE_SECONDS: 900,
+        API_TRUSTED_PROXIES: [],
+        API_BFF_CREDENTIAL: BFF,
         API_OPERATOR_DATABASE_URL: OPERATOR_DB_URL,
         ...OIDC,
       },
@@ -187,6 +196,7 @@ describe('identity trust domains (D-025)', () => {
         API_OPERATOR_OIDC_ISSUER: undefined,
         API_OPERATOR_OIDC_AUDIENCE: undefined,
         API_OPERATOR_OIDC_JWKS_URL: undefined,
+        API_OPERATOR_OIDC_CLIENT_ID: undefined,
       };
       expect(parseApiEnv(without).ok).toBe(false);
       const http = {
@@ -225,6 +235,61 @@ describe('identity trust domains (D-025)', () => {
     };
     expect(parseApiEnv(merged).ok).toBe(false);
   });
+
+  it('rejects owner and operator sharing one web client', () => {
+    expect(
+      parseApiEnv({ ...valid, API_OPERATOR_OIDC_CLIENT_ID: OIDC.API_OWNER_OIDC_CLIENT_ID }).ok,
+    ).toBe(false);
+  });
+});
+
+describe('sessions and the BFF credential (D-034)', () => {
+  it('requires the BFF credential whenever a login domain is configured', () => {
+    const result = parseApiEnv({ ...valid, API_BFF_CREDENTIAL: undefined });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.issues).toContainEqual({
+      variable: 'API_BFF_CREDENTIAL',
+      problem: 'is required',
+    });
+  });
+
+  it.each(['too-short', 'has spaces in it and is long enough to pass the length rule ok'])(
+    'rejects a weak or malformed BFF credential without echoing it: %s',
+    (value) => {
+      const result = parseApiEnv({ ...valid, API_BFF_CREDENTIAL: value });
+      expect(result.ok).toBe(false);
+      expect(JSON.stringify(result)).not.toContain(value);
+    },
+  );
+
+  it('caps the operator MFA age at one hour (audit C-08)', () => {
+    expect(parseApiEnv({ ...valid, API_OPERATOR_MFA_MAX_AGE_SECONDS: '3600' }).ok).toBe(true);
+    expect(parseApiEnv({ ...valid, API_OPERATOR_MFA_MAX_AGE_SECONDS: '3601' }).ok).toBe(false);
+  });
+
+  it('bounds the idle timeouts', () => {
+    expect(parseApiEnv({ ...valid, API_OWNER_SESSION_IDLE_SECONDS: '59' }).ok).toBe(false);
+    expect(parseApiEnv({ ...valid, API_OPERATOR_SESSION_IDLE_SECONDS: '3601' }).ok).toBe(false);
+  });
+});
+
+describe('API_TRUSTED_PROXIES (D-037)', () => {
+  it('accepts exact addresses and CIDR ranges', () => {
+    const result = parseApiEnv({ ...valid, API_TRUSTED_PROXIES: '10.0.0.1, 10.1.0.0/16,fd00::/8' });
+    expect(result.ok && result.env.API_TRUSTED_PROXIES).toEqual([
+      '10.0.0.1',
+      '10.1.0.0/16',
+      'fd00::/8',
+    ]);
+  });
+
+  it.each(['*', '10.0.0.0/33', 'proxy.internal', '10.0.0.0/x', '0.0.0.0/-1'])(
+    'rejects %s',
+    (value) => {
+      expect(parseApiEnv({ ...valid, API_TRUSTED_PROXIES: value }).ok).toBe(false);
+    },
+  );
 });
 
 describe('operator database configuration (D-028)', () => {

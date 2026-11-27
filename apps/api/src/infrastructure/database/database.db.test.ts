@@ -7,17 +7,11 @@ import { sql } from 'kysely';
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
 
-import {
-  assertSafeRuntimeRole,
-  createDatabase,
-  toTenantId,
-  UnsafeDatabaseRoleError,
-  withTenant,
-} from './database.js';
+import { createDatabase, toTenantId, withTenant } from './database.js';
 import type { Db, TenantId } from './database.js';
 import { migrate, MigrationError } from './migrate.js';
 
-const { ownerUrl, runtimeUrl, operatorUrl } = inject('database');
+const { adminUrl, ownerUrl, runtimeUrl } = inject('database');
 const migrationsDir = inject('migrationsDir');
 
 // Synthetic tenants and accounts (valid v4 uuids).
@@ -27,23 +21,14 @@ const ACCOUNT_A = '1a1a1a1a-1a1a-4a1a-8a1a-1a1a1a1a1a1a';
 const ACCOUNT_B = '1b1b1b1b-1b1b-4b1b-8b1b-1b1b1b1b1b1b';
 
 let db: Db;
+/** Cluster superuser on the throwaway test database: seeding and inspection only. */
 let owner: pg.Client;
 
-/** Runs one statement as a role, outside any tenant context. */
-async function asRole(url: string, text: string, values: unknown[] = []) {
-  const client = new pg.Client({ connectionString: url });
-  await client.connect();
-  try {
-    return await client.query(text, values);
-  } finally {
-    await client.end();
-  }
-}
-
 beforeAll(async () => {
-  owner = new pg.Client({ connectionString: ownerUrl });
+  owner = new pg.Client({ connectionString: adminUrl });
   await owner.connect();
-  // Seed as the migration role (its explicit owner policies allow this; FORCE still applies).
+  // Seed as the test cluster's superuser: since migration 0005 no application role, not even the
+  // migration role, can write tenant rows directly (D-035).
   await owner.query(`
     INSERT INTO app.tenants (id, slug, display_name) VALUES
       ('${TENANT_A}', 'tenant-a', 'Tenant A'), ('${TENANT_B}', 'tenant-b', 'Tenant B');
@@ -68,7 +53,6 @@ beforeAll(async () => {
     CREATE POLICY notes_isolation ON app_test.notes FOR ALL TO app_runtime
       USING (tenant_id = (SELECT app.current_tenant_id()))
       WITH CHECK (tenant_id = (SELECT app.current_tenant_id()));
-    CREATE POLICY notes_owner ON app_test.notes FOR ALL TO app_owner USING (true) WITH CHECK (true);
     GRANT SELECT, INSERT, UPDATE, DELETE ON app_test.notes TO app_runtime;
     INSERT INTO app_test.notes (tenant_id, body) VALUES
       ('${TENANT_A}', 'a1'), ('${TENANT_A}', 'a2'), ('${TENANT_B}', 'b1');
@@ -78,6 +62,9 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await db.destroy();
+  // The probe schema grants the runtime extra privileges; remove it so later files (which run
+  // the exact-privilege startup check) see the real schema only.
+  await owner.query('DROP SCHEMA app_test CASCADE');
   await owner.end();
 });
 
@@ -112,81 +99,6 @@ describe('migrations (D-024)', () => {
 
   it('cannot be run by the runtime role', async () => {
     await expect(migrate(runtimeUrl, migrationsDir)).rejects.toThrow();
-  });
-});
-
-describe('row-level security catalog (D-028)', () => {
-  it('every table in schema app has RLS enabled and forced', async () => {
-    const { rows } = await owner.query<{ table: string; rls: boolean; force: boolean }>(`
-      SELECT c.relname AS table, c.relrowsecurity AS rls, c.relforcerowsecurity AS force
-      FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-      WHERE n.nspname = 'app' AND c.relkind IN ('r', 'p') ORDER BY 1`);
-    expect(rows.length).toBeGreaterThanOrEqual(4);
-    expect(rows.filter((r) => !r.rls || !r.force)).toEqual([]);
-  });
-
-  it('every tenant-owned table has a runtime policy keyed on the current tenant, with WITH CHECK', async () => {
-    const { rows } = await owner.query<{ table: string; policies: number; keyed: number }>(`
-      SELECT c.relname AS table,
-             count(p.polname)::int AS policies,
-             count(p.polname) FILTER (
-               WHERE pg_get_expr(p.polqual, p.polrelid) LIKE '%current_tenant_id()%'
-                 AND pg_get_expr(p.polwithcheck, p.polrelid) LIKE '%current_tenant_id()%'
-                 AND 'app_runtime'::regrole = ANY (p.polroles))::int AS keyed
-      FROM pg_class c
-      JOIN pg_namespace n ON n.oid = c.relnamespace
-      JOIN pg_attribute a ON a.attrelid = c.oid AND a.attname = 'tenant_id' AND NOT a.attisdropped
-      LEFT JOIN pg_policy p ON p.polrelid = c.oid
-      WHERE n.nspname = 'app' AND c.relkind IN ('r', 'p')
-      GROUP BY c.relname ORDER BY 1`);
-    expect(rows.map((r) => r.table)).toContain('memberships');
-    expect(rows.filter((r) => r.keyed === 0)).toEqual([]);
-  });
-
-  it('no application role is a superuser or has BYPASSRLS', async () => {
-    const { rows } = await owner.query<{ rolname: string }>(`
-      SELECT rolname FROM pg_roles
-      WHERE rolname IN ('app_owner', 'app_runtime', 'app_operator') AND (rolsuper OR rolbypassrls)`);
-    expect(rows).toEqual([]);
-  });
-});
-
-describe('runtime role safety (D-028)', () => {
-  it('the startup check accepts the runtime role', async () => {
-    await expect(assertSafeRuntimeRole(db)).resolves.toBeUndefined();
-  });
-
-  it('the startup check refuses the migration role, which owns the tables', async () => {
-    const ownerDb = createDatabase({ connectionString: ownerUrl, maxConnections: 1 });
-    try {
-      await expect(assertSafeRuntimeRole(ownerDb)).rejects.toBeInstanceOf(UnsafeDatabaseRoleError);
-    } finally {
-      await ownerDb.destroy();
-    }
-  });
-
-  it.each([
-    ['disable RLS', 'ALTER TABLE app.memberships DISABLE ROW LEVEL SECURITY'],
-    ['un-force RLS', 'ALTER TABLE app.memberships NO FORCE ROW LEVEL SECURITY'],
-    ['drop a policy', 'DROP POLICY memberships_tenant_isolation ON app.memberships'],
-    ['create a table', 'CREATE TABLE app.x (id int)'],
-    ['grant itself BYPASSRLS', 'ALTER ROLE app_runtime BYPASSRLS'],
-    ['become the owner', 'SET ROLE app_owner'],
-    ['read accounts', 'SELECT * FROM app.accounts'],
-    ['read the operator audit', 'SELECT * FROM app.operator_audit'],
-    [
-      'write memberships',
-      `INSERT INTO app.memberships (tenant_id, account_id) VALUES ('${TENANT_A}', '${ACCOUNT_B}')`,
-    ],
-    ['create a temporary table', 'CREATE TEMP TABLE t (id int)'],
-  ])('the runtime role cannot %s', async (_label, statement) => {
-    await expect(asRole(runtimeUrl, statement)).rejects.toThrow(/permission denied|must be owner/);
-  });
-
-  it('the operator role has no direct table access', async () => {
-    await expect(asRole(operatorUrl, 'SELECT * FROM app.tenants')).rejects.toThrow(
-      /permission denied/,
-    );
   });
 });
 
@@ -323,10 +235,30 @@ describe('tenant context is set only by withTenant() (D-028)', () => {
     };
     walk(root);
     expect(files.length).toBeGreaterThan(5);
+    // Audit A-08: match the bare function name (comments or quotes between the name and the
+    // parenthesis must not evade the scan), session-level SET of any app.* setting, and role
+    // switches. Only database.ts (withTenant) and migrate.ts (its own guard setting) may call
+    // set_config at all.
+    const allowed = new Map([
+      [
+        join('infrastructure', 'database', 'database.ts'),
+        /set_config\('app\.tenant_id', \$\{id\}, true\)/g,
+      ],
+      [
+        join('infrastructure', 'database', 'migrate.ts'),
+        /set_config\('migrations\.guard', \$1, true\)/g,
+      ],
+    ]);
     const offenders = files.filter((file) => {
-      if (file.endsWith(join('infrastructure', 'database', 'database.ts'))) return false;
-      const text = readFileSync(file, 'utf8');
-      return /set_config\s*\(|\bSET\s+(LOCAL\s+|SESSION\s+)?app\.|app\.tenant_id/i.test(text);
+      let text = readFileSync(file, 'utf8');
+      for (const [suffix, pattern] of allowed) {
+        if (file.endsWith(suffix)) text = text.replace(pattern, '');
+      }
+      // Documentation comments may name the function; code may not call it.
+      text = text.replace(/^\s*(\*|\/\/).*$/gm, '');
+      return /set_config|\bSET\s+(LOCAL\s+|SESSION\s+)?(app\.|ROLE\b|SESSION\s+AUTHORIZATION)/i.test(
+        text,
+      );
     });
     expect(offenders).toEqual([]);
     // And database.ts itself uses only the transaction-local form.

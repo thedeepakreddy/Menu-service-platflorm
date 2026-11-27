@@ -1,26 +1,28 @@
 import { Global, Module } from '@nestjs/common';
 import type { DynamicModule } from '@nestjs/common';
 
-import { IDENTITY, OperatorGuard, OwnerGuard } from './guards.js';
+import { BffGuard, IDENTITY, OperatorGuard, OwnerGuard } from './guards.js';
 import type { IdentityConfig } from './guards.js';
-import { AccountService } from './identity.service.js';
 import { OperatorSessionController } from './operator-session.controller.js';
+import { SessionService } from './session.service.js';
+import { SessionsController } from './sessions.controller.js';
 
-/** Identity verification and account mapping (Phase 2, D-025). Requires the DatabaseModule. */
+/** Login verification and server-side sessions (Phase 2, D-034). Requires the DatabaseModule. */
 @Global()
 @Module({})
 export class IdentityModule {
   static forRoot(config: IdentityConfig): DynamicModule {
     return {
       module: IdentityModule,
-      controllers: [OperatorSessionController],
+      controllers: [SessionsController, OperatorSessionController],
       providers: [
         { provide: IDENTITY, useValue: config },
-        AccountService,
+        SessionService,
+        BffGuard,
         OwnerGuard,
         OperatorGuard,
       ],
-      exports: [IDENTITY, AccountService, OwnerGuard, OperatorGuard],
+      exports: [IDENTITY, SessionService, BffGuard, OwnerGuard, OperatorGuard],
     };
   }
 }

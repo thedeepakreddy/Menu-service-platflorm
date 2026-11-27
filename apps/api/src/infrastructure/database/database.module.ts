@@ -1,6 +1,14 @@
-import { Global, Inject, Module } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Global,
+  Inject,
+  Module,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import type { DynamicModule, OnApplicationShutdown } from '@nestjs/common';
 
+import { isDatabaseReady } from './database.js';
 import type { Db } from './database.js';
 
 /** Injection token for the application's Kysely instance (runtime role only, D-028). */
@@ -24,12 +32,29 @@ class DatabaseLifecycle implements OnApplicationShutdown {
   }
 }
 
+/**
+ * `GET /health/ready`: readiness (audit B-01, G-33). Liveness (`GET /health`) never touches a
+ * dependency; readiness answers 503 while the database is unreachable, so a load balancer stops
+ * routing to this instance until the pool has reconnected.
+ */
+@Controller('health')
+class ReadinessController {
+  constructor(@Inject(DATABASE) private readonly db: Db) {}
+
+  @Get('ready')
+  async ready(): Promise<{ status: 'ready' }> {
+    if (!(await isDatabaseReady(this.db))) throw new ServiceUnavailableException();
+    return { status: 'ready' };
+  }
+}
+
 @Global()
 @Module({})
 export class DatabaseModule {
   static forRoot(db: Db, operatorDb?: Db): DynamicModule {
     return {
       module: DatabaseModule,
+      controllers: [ReadinessController],
       providers: [
         { provide: DATABASE, useValue: db },
         { provide: OPERATOR_DATABASE, useValue: operatorDb ?? null },

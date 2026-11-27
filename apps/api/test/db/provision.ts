@@ -31,8 +31,13 @@ const ROLE_ATTRIBUTES: Record<RoleName, string> = {
   app_operator: 'LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOINHERIT',
 };
 
+const DEFINER_ATTRIBUTES =
+  'NOLOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION';
+
 export type ProvisionedDatabase = {
   database: string;
+  /** Superuser URL for this database: test seeding only (bypasses RLS, like a restore would). */
+  adminUrl: string;
   ownerUrl: string;
   runtimeUrl: string;
   operatorUrl: string;
@@ -74,6 +79,14 @@ export async function provisionDatabase(
         `${verb} ROLE ${role} ${ROLE_ATTRIBUTES[role]} PASSWORD ${admin.escapeLiteral(SYNTHETIC_PASSWORDS[role])}`,
       );
     }
+    // The definer role (D-035): owns every SECURITY DEFINER function and holds the only
+    // cross-tenant policies. It can never log in, and only the migration role may SET ROLE to it
+    // (needed to hand function ownership over); nobody inherits its privileges.
+    const definer = await admin.query("SELECT 1 FROM pg_roles WHERE rolname = 'app_definer'");
+    await admin.query(
+      `${definer.rowCount === 0 ? 'CREATE' : 'ALTER'} ROLE app_definer ${DEFINER_ATTRIBUTES}`,
+    );
+    await admin.query('GRANT app_definer TO app_owner WITH INHERIT FALSE, SET TRUE');
     await admin.query(`DROP DATABASE IF EXISTS ${database} WITH (FORCE)`);
     await admin.query(`CREATE DATABASE ${database} OWNER app_owner`);
     // No default access for other roles; app roles connect explicitly; no TEMP for anyone else.
@@ -94,8 +107,11 @@ export async function provisionDatabase(
   }
 
   await migrate(ownerUrl, migrationsDir);
+  const adminDbUrl = new URL(adminUrl.toString());
+  adminDbUrl.pathname = `/${database}`;
   return {
     database,
+    adminUrl: adminDbUrl.toString(),
     ownerUrl,
     runtimeUrl: urlFor(adminUrl, 'app_runtime', database),
     operatorUrl: urlFor(adminUrl, 'app_operator', database),

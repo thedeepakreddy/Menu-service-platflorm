@@ -3,6 +3,7 @@ import { Catch, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import type { ArgumentsHost, ExceptionFilter } from '@nestjs/common';
 import type { Request, Response } from 'express';
 
+import { isDatabaseUnavailable } from './infrastructure/database/database.js';
 import { resolveRequestId } from './request-id.js';
 
 const codeByStatus: Partial<Record<number, ErrorCode>> = {
@@ -62,12 +63,28 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const req = http.getRequest<Request>();
     const res = http.getResponse<Response>();
 
+    // A database that is momentarily unavailable is a 503, not a 500 (audit B-01): the client may
+    // retry, and the log records only the database error code.
+    const unavailable = !(exception instanceof HttpException) && isDatabaseUnavailable(exception);
     const status =
-      exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
+      exception instanceof HttpException
+        ? exception.getStatus()
+        : unavailable
+          ? HttpStatus.SERVICE_UNAVAILABLE
+          : HttpStatus.INTERNAL_SERVER_ERROR;
     const code = errorCodeForStatus(status);
     const requestId = req.requestId ?? resolveRequestId(undefined);
 
-    if (status >= 500) {
+    if (unavailable) {
+      const dbCode = (exception as { code?: unknown }).code;
+      this.logger.warn({
+        event: 'database_unavailable',
+        requestId,
+        status,
+        code,
+        dbCode: typeof dbCode === 'string' ? dbCode : 'unknown',
+      });
+    } else if (status >= 500) {
       this.logger.error({
         event: 'exception',
         requestId,

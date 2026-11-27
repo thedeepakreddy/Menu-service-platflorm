@@ -2,7 +2,6 @@ import { Controller, Get, NotFoundException, Param, Req, UseGuards } from '@nest
 import type { OwnerTenant } from '@platform/contracts';
 import type { Request } from 'express';
 
-import { RateLimit, RateLimitGuard } from '../../infrastructure/rate-limit/rate-limit.js';
 import { OwnerGuard } from '../identity/index.js';
 import { TenancyService } from './tenancy.service.js';
 
@@ -13,9 +12,9 @@ import { TenancyService } from './tenancy.service.js';
  * so the response reveals nothing about other tenants (Doc 04 §20).
  */
 @Controller('owner/tenants')
-// Rate limiting runs first, so failed authentication attempts are counted too (D-031).
-@UseGuards(RateLimitGuard, OwnerGuard)
-@RateLimit('owner')
+// Rate limiting runs before this, as middleware, so failed authentication attempts are counted
+// too (D-031, D-037).
+@UseGuards(OwnerGuard)
 export class OwnerTenantController {
   constructor(private readonly tenancy: TenancyService) {}
 

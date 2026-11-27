@@ -1,16 +1,27 @@
-import { HttpException, HttpStatus, Inject, Injectable, Logger, SetMetadata } from '@nestjs/common';
-import type { CanActivate, ExecutionContext } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-import type { Request, Response } from 'express';
+import { Logger } from '@nestjs/common';
+import type { ErrorEnvelope } from '@platform/contracts';
+import type { NextFunction, Request, Response } from 'express';
 
+import { resolveRequestId } from '../../request-id.js';
+import {
+  addressKey,
+  CLIENT_ADDRESS_HEADER,
+  clientAddress,
+  parseTrustedProxies,
+} from './client-address.js';
+import type { TrustedProxies } from './client-address.js';
 import { RateLimiter } from './rate-limiter.js';
 import type { RateLimitPolicy } from './rate-limiter.js';
 
 /**
- * Route groups with their limits (D-031). Keyed by group + client socket address. Applied BEFORE
- * authentication guards, so failed authentication attempts count too.
+ * Route groups with their limits (D-031, amended by D-037). A group's budget is SHARED by every
+ * route in the group (audit D-01: the former per-module guard gave each controller its own
+ * limiter, so the operator budget was effectively doubled).
+ *
+ * Applied as Express middleware BEFORE body parsing and before any authentication or database
+ * work (audit D-02), so a refused request costs only a map lookup. One limiter per process.
  */
-export type RateLimitGroup = 'public-tenant' | 'owner' | 'operator';
+export type RateLimitGroup = 'public-tenant' | 'owner' | 'operator' | 'session';
 
 export type RateLimitConfig = {
   policies: Record<RateLimitGroup, RateLimitPolicy>;
@@ -25,58 +36,84 @@ export const DEFAULT_RATE_LIMITS: RateLimitConfig = {
     'public-tenant': { limit: 120, windowMs: 60_000 },
     owner: { limit: 120, windowMs: 60_000 },
     operator: { limit: 30, windowMs: 60_000 },
+    session: { limit: 60, windowMs: 60_000 },
   },
   maxKeys: 50_000,
 };
 
-export const RATE_LIMIT_CONFIG = Symbol('RATE_LIMIT_CONFIG');
-const RATE_LIMIT_GROUP = 'rateLimitGroup';
-
-/** Marks a controller or handler with its rate-limit group. */
-export const RateLimit = (group: RateLimitGroup) => SetMetadata(RATE_LIMIT_GROUP, group);
-
 /**
- * The client address used as the key. Only the socket address: X-Forwarded-For is NOT trusted,
- * because without a configured trusted proxy any client could forge it (D-031). Behind a proxy,
- * all clients would share one key; configuring a trusted proxy is a deployment task (Phase 10).
+ * The group a request path belongs to. Express matches routes case-insensitively, so the path is
+ * normalised (decoded, lower-cased, repeated slashes collapsed) before classification: no
+ * spelling of an operator path can fall into a more generous group. Only the health probes are
+ * unlimited; every other path (including unknown ones) is limited.
  */
-function clientAddress(req: Request): string {
-  return req.socket.remoteAddress ?? 'unknown';
+export function routeGroup(rawPath: string): RateLimitGroup | undefined {
+  let path = rawPath;
+  try {
+    path = decodeURIComponent(rawPath);
+  } catch {
+    // keep the raw path; malformed escapes are classified as they are
+  }
+  path = path.toLowerCase().replace(/\/{2,}/g, '/');
+  if (path === '/health' || path === '/health/ready') return undefined;
+  if (path === '/operator' || path.startsWith('/operator/')) return 'operator';
+  if (path === '/owner' || path.startsWith('/owner/')) return 'owner';
+  if (path === '/auth/sessions' || path.startsWith('/auth/sessions/')) return 'session';
+  return 'public-tenant';
 }
 
-@Injectable()
-export class RateLimitGuard implements CanActivate {
-  private readonly limiter: RateLimiter;
-  private readonly logger = new Logger('RateLimit');
+export type RateLimitMiddlewareOptions = {
+  config: RateLimitConfig;
+  /** Exact IPs / CIDRs whose X-Forwarded-For entries are trusted (D-037). Empty: none. */
+  trustedProxies?: readonly string[];
+  /** True if the request carries the valid BFF credential (then its forwarded address counts). */
+  isBff?: (req: Request) => boolean;
+};
 
-  constructor(
-    @Inject(Reflector) private readonly reflector: Reflector,
-    @Inject(RATE_LIMIT_CONFIG) private readonly config: RateLimitConfig,
-  ) {
-    this.limiter = new RateLimiter(config.maxKeys, config.now);
-  }
+const logger = new Logger('RateLimit');
 
-  canActivate(context: ExecutionContext): boolean {
-    const group = this.reflector.getAllAndOverride<RateLimitGroup | undefined>(RATE_LIMIT_GROUP, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
-    if (group === undefined) return true;
-    const http = context.switchToHttp();
-    const req = http.getRequest<Request>();
-    const decision = this.limiter.hit(
-      `${group}|${clientAddress(req)}`,
-      this.config.policies[group],
+function header(req: Request, name: string): string | undefined {
+  const value = req.headers[name];
+  return typeof value === 'string' ? value : undefined;
+}
+
+export function createRateLimitMiddleware(options: RateLimitMiddlewareOptions) {
+  const { config } = options;
+  const limiter = new RateLimiter(config.maxKeys, config.now);
+  const proxies: TrustedProxies = parseTrustedProxies(options.trustedProxies ?? []);
+  const isBff = options.isBff ?? (() => false);
+
+  return function rateLimit(req: Request, res: Response, next: NextFunction): void {
+    const group = routeGroup(req.path);
+    if (group === undefined) {
+      next();
+      return;
+    }
+    const address = clientAddress(
+      {
+        socketAddress: req.socket.remoteAddress,
+        forwardedFor: header(req, 'x-forwarded-for'),
+        bffForwarded: header(req, CLIENT_ADDRESS_HEADER),
+        bffAuthenticated: header(req, CLIENT_ADDRESS_HEADER) !== undefined && isBff(req),
+      },
+      proxies,
     );
-    if (decision.allowed) return true;
-    http.getResponse<Response>().setHeader('Retry-After', String(decision.retryAfterSeconds));
+    const decision = limiter.hit(`${group}|${addressKey(address)}`, config.policies[group]);
+    if (decision.allowed) {
+      next();
+      return;
+    }
+    const requestId = req.requestId ?? resolveRequestId(undefined);
     // Never log the client address (D-020): personal data, and not needed to act on this.
-    this.logger.warn({
-      event: 'rate_limited',
-      group,
-      reason: decision.reason,
-      requestId: req.requestId,
-    });
-    throw new HttpException('Too Many Requests', HttpStatus.TOO_MANY_REQUESTS);
-  }
+    logger.warn({ event: 'rate_limited', group, reason: decision.reason, requestId });
+    const body: ErrorEnvelope = {
+      error: {
+        code: 'TOO_MANY_REQUESTS',
+        message: 'Too many requests. Please retry later.',
+        requestId,
+      },
+    };
+    res.setHeader('Retry-After', String(decision.retryAfterSeconds));
+    res.status(429).json(body);
+  };
 }

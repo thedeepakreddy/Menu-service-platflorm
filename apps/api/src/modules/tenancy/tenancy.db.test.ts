@@ -12,7 +12,7 @@ import { createApp } from '../../create-app.js';
 import { createDatabase } from '../../infrastructure/database/database.js';
 import type { Db } from '../../infrastructure/database/database.js';
 
-const { ownerUrl, runtimeUrl, operatorUrl } = inject('database');
+const { adminUrl, runtimeUrl, operatorUrl } = inject('database');
 
 // Unique to this file: the database is shared by every db test file.
 const ACTIVE_ID = '2a2a2a2a-2a2a-4a2a-8a2a-2a2a2a2a2a2a';
@@ -27,7 +27,7 @@ let db: Db;
 let base: string;
 
 beforeAll(async () => {
-  const owner = new pg.Client({ connectionString: ownerUrl });
+  const owner = new pg.Client({ connectionString: adminUrl });
   await owner.connect();
   for (const [id, slug, name, status] of TENANTS) {
     await owner.query(
@@ -80,7 +80,7 @@ describe('GET /public/tenants/:slug (D-027)', () => {
 
 describe('the resolver function (D-027, D-028)', () => {
   it('pins search_path and runs as SECURITY DEFINER', async () => {
-    const owner = new pg.Client({ connectionString: ownerUrl });
+    const owner = new pg.Client({ connectionString: adminUrl });
     await owner.connect();
     const { rows } = await owner.query<{ secdef: boolean; config: string[] | null }>(`
       SELECT p.prosecdef AS secdef, p.proconfig AS config

@@ -9,10 +9,16 @@ import { AllExceptionsFilter } from './all-exceptions.filter.js';
 import { AppModule } from './app.module.js';
 import type { Db } from './infrastructure/database/database.js';
 import { DatabaseModule } from './infrastructure/database/database.module.js';
-import { DEFAULT_RATE_LIMITS } from './infrastructure/rate-limit/rate-limit.js';
+import {
+  createRateLimitMiddleware,
+  DEFAULT_RATE_LIMITS,
+} from './infrastructure/rate-limit/rate-limit.js';
 import type { RateLimitConfig } from './infrastructure/rate-limit/rate-limit.js';
-import { RateLimitModule } from './infrastructure/rate-limit/rate-limit.module.js';
-import { IdentityModule } from './modules/identity/index.js';
+import {
+  BFF_CREDENTIAL_HEADER,
+  bffCredentialMatches,
+  IdentityModule,
+} from './modules/identity/index.js';
 import type { IdentityConfig } from './modules/identity/index.js';
 import { OperatorTenantsModule } from './modules/operator-tenants/index.js';
 import { TenancyModule } from './modules/tenancy/index.js';
@@ -37,9 +43,17 @@ export type CreateAppOptions = {
   identity?: IdentityConfig;
   /** The operator-role database (D-028). Absent: operator actions fail closed (503). */
   operatorDatabase?: Db;
-  /** Rate limits (D-031); defaults to DEFAULT_RATE_LIMITS. Instance-local. */
+  /** Rate limits (D-031, D-037); defaults to DEFAULT_RATE_LIMITS. Instance-local. */
   rateLimits?: RateLimitConfig;
+  /** Reverse proxies (exact IPs / CIDRs) whose X-Forwarded-For is trusted (D-037). Default none. */
+  trustedProxies?: readonly string[];
 };
+
+/** Nest's own body parsers are off: JSON parsing is registered after rate limiting (D-02). */
+const NEST_OPTIONS = Object.freeze({ bodyParser: false });
+
+/** JSON only (no urlencoded or other parsers, audit B-08), bounded (D-031). */
+export const JSON_BODY_LIMIT = '32kb';
 
 export async function createApp(options: CreateAppOptions = {}): Promise<INestApplication> {
   // Configure logging before bootstrap so module-initialisation logs honour it too.
@@ -50,19 +64,26 @@ export async function createApp(options: CreateAppOptions = {}): Promise<INestAp
   const entry =
     options.database === undefined
       ? root
-      : rootWithDatabase(
-          root,
-          options.database,
-          options.identity ?? {},
-          options.operatorDatabase,
-          options.rateLimits ?? DEFAULT_RATE_LIMITS,
-        );
-  const app = await NestFactory.create<NestExpressApplication>(entry);
+      : rootWithDatabase(root, options.database, options.identity ?? {}, options.operatorDatabase);
+  // Body parsing is registered explicitly below, AFTER rate limiting (audit D-02).
+  const app = await NestFactory.create<NestExpressApplication>(entry, NEST_OPTIONS);
   if (logger !== false) app.useLogger(logger);
   app.disable('x-powered-by');
   app.use(requestIdMiddleware);
   app.use(requestLoggingMiddleware);
   app.use(securityHeaders({ hsts: options.hsts ?? false }));
+  const bffCredential = options.identity?.bffCredential;
+  app.use(
+    createRateLimitMiddleware({
+      config: options.rateLimits ?? DEFAULT_RATE_LIMITS,
+      trustedProxies: options.trustedProxies ?? [],
+      isBff: (req) => {
+        const value = req.headers[BFF_CREDENTIAL_HEADER];
+        return bffCredentialMatches(typeof value === 'string' ? value : undefined, bffCredential);
+      },
+    }),
+  );
+  app.useBodyParser('json', { limit: JSON_BODY_LIMIT });
   const cors = corsOptions(options.corsAllowedOrigins ?? []);
   if (cors !== undefined) app.enableCors(cors);
   app.useGlobalFilters(new AllExceptionsFilter());
@@ -76,12 +97,10 @@ function rootWithDatabase(
   db: Db,
   identity: IdentityConfig,
   operatorDb: Db | undefined,
-  rateLimits: RateLimitConfig,
 ): Type {
   @Module({
     imports: [
       DatabaseModule.forRoot(db, operatorDb),
-      RateLimitModule.forRoot(rateLimits),
       IdentityModule.forRoot(identity),
       root,
       TenancyModule,

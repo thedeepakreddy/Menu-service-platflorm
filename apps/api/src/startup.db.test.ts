@@ -53,11 +53,11 @@ function startApi(
 }
 let lastStderr = '';
 
-describe('API startup database role check (D-028)', () => {
+describe('API startup database role check (D-028, D-035)', () => {
   it('refuses to start as the migration role, which owns the tables', async () => {
     expect(await startApi(ownerUrl)).toBe(1);
     expect(lastStderr).toContain('refusing to start');
-    expect(lastStderr).toContain('owns application tables');
+    expect(lastStderr).toContain('owns database objects');
     expect(lastStderr).not.toContain('synthetic-owner-password');
   });
 
@@ -67,7 +67,19 @@ describe('API startup database role check (D-028)', () => {
 
   it('refuses to start when the operator connection uses the table-owning role (M2.4)', async () => {
     expect(await startApi(runtimeUrl, ownerUrl)).toBe(1);
-    expect(lastStderr).toContain('owns application tables');
+    expect(lastStderr).toContain('owns database objects');
+  });
+
+  it('refuses the two pool credentials swapped (effective privileges, not names)', async () => {
+    expect(await startApi(operatorUrl, runtimeUrl)).toBe(1);
+    expect(lastStderr).toContain('unexpected privileges');
+  });
+
+  it('refuses a runtime URL that presets a tenant context (audit A-07)', async () => {
+    const url = new URL(runtimeUrl);
+    url.searchParams.set('options', '-c app.tenant_id=0a0a0a0a-0a0a-4a0a-8a0a-0a0a0a0a0a0a');
+    expect(await startApi(url.toString())).toBe(1);
+    expect(lastStderr).toContain('preset tenant context');
   });
 
   it('starts with the runtime and operator roles', async () => {

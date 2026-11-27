@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { tenantSlugSchema } from '@platform/contracts';
 import { sql } from 'kysely';
 
-import { toTenantId, withTenant } from '../../infrastructure/database/database.js';
+import { toTenantId, withReadRetry, withTenant } from '../../infrastructure/database/database.js';
 import type { Db, TenantId } from '../../infrastructure/database/database.js';
 import { DATABASE } from '../../infrastructure/database/database.module.js';
 
@@ -27,9 +27,12 @@ export class TenancyService {
   async resolveActiveTenant(slug: string): Promise<ResolvedTenant | undefined> {
     const parsed = tenantSlugSchema.safeParse(slug);
     if (!parsed.success) return undefined;
-    const { rows } = await sql<{ id: string; slug: string; display_name: string }>`
-      SELECT id, slug, display_name FROM app.resolve_active_tenant(${parsed.data})
-    `.execute(this.db);
+    // Idempotent read: retried once if a pooled connection was just lost (audit B-01).
+    const { rows } = await withReadRetry(() =>
+      sql<{ id: string; slug: string; display_name: string }>`
+        SELECT id, slug, display_name FROM app.resolve_active_tenant(${parsed.data})
+      `.execute(this.db),
+    );
     const row = rows[0];
     if (row === undefined) return undefined;
     return { id: toTenantId(row.id), slug: row.slug, displayName: row.display_name };
@@ -43,13 +46,15 @@ export class TenancyService {
   async ownerTenant(accountId: string, slug: string): Promise<ResolvedTenant | undefined> {
     const tenant = await this.resolveActiveTenant(slug);
     if (tenant === undefined) return undefined;
-    const member = await withTenant(this.db, tenant.id, (trx) =>
-      trx
-        .selectFrom('app.memberships')
-        .select('role')
-        .where('account_id', '=', accountId)
-        .where('status', '=', 'active')
-        .executeTakeFirst(),
+    const member = await withReadRetry(() =>
+      withTenant(this.db, tenant.id, (trx) =>
+        trx
+          .selectFrom('app.memberships')
+          .select('role')
+          .where('account_id', '=', accountId)
+          .where('status', '=', 'active')
+          .executeTakeFirst(),
+      ),
     );
     return member === undefined ? undefined : tenant;
   }
