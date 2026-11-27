@@ -8,19 +8,19 @@ _Last updated: 2026-11-27_
 
 ## Phase ledger
 
-| Phase | Title                                    | Status                                  | Gate evidence                                                |
-| ----- | ---------------------------------------- | --------------------------------------- | ------------------------------------------------------------ |
-| 0     | Reconnaissance & specification anchoring | verified — accepted by owner 2026-11-27 | Commit `5d7c2cb`; baseline below                             |
-| 1     | Foundation                               | implemented — awaiting gate acceptance  | Local gate run below; CI result: see "Phase 1 gate evidence" |
-| 2     | Tenant & identity                        | not started                             | Blocked on [G-01, G-03–G-07](GAPS.md) decisions              |
-| 3     | Customer platform foundation             | not started                             | —                                                            |
-| 4     | Menu domain                              | not started                             | —                                                            |
-| 5     | Customer experience                      | not started                             | —                                                            |
-| 6     | Owner workspace                          | not started                             | —                                                            |
-| 7     | QR & promotions                          | not started                             | —                                                            |
-| 8     | Publishing & analytics                   | not started                             | —                                                            |
-| 9     | Progressive AI & integrations            | not started                             | —                                                            |
-| 10    | Release hardening                        | not started                             | —                                                            |
+| Phase | Title                                    | Status                                  | Gate evidence                                                             |
+| ----- | ---------------------------------------- | --------------------------------------- | ------------------------------------------------------------------------- |
+| 0     | Reconnaissance & specification anchoring | verified — accepted by owner 2026-11-27 | Commit `5d7c2cb`; baseline below                                          |
+| 1     | Foundation                               | implemented — awaiting gate acceptance  | Local gates and CI run #1 (`e0fd9eb`) passed; see "Phase 1 gate evidence" |
+| 2     | Tenant & identity                        | not started                             | Blocked on [G-01, G-03–G-07](GAPS.md) decisions                           |
+| 3     | Customer platform foundation             | not started                             | —                                                                         |
+| 4     | Menu domain                              | not started                             | —                                                                         |
+| 5     | Customer experience                      | not started                             | —                                                                         |
+| 6     | Owner workspace                          | not started                             | —                                                                         |
+| 7     | QR & promotions                          | not started                             | —                                                                         |
+| 8     | Publishing & analytics                   | not started                             | —                                                                         |
+| 9     | Progressive AI & integrations            | not started                             | —                                                                         |
+| 10    | Release hardening                        | not started                             | —                                                                         |
 
 ## Phase 0 baseline (inspected 2026-11-27)
 
