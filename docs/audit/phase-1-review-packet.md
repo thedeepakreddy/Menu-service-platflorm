@@ -14,6 +14,8 @@ evidence.
 > for every finding and its status. This packet is kept as the record of what was handed to the
 > auditor.
 > A later remediation audit (R-01 – R-10) is recorded in the same register.
+> For the final Phase 1 state see [`phase-1-closure-package.md`](phase-1-closure-package.md) and
+> [`phase-1-independent-audit-handoff.md`](phase-1-independent-audit-handoff.md); this packet is historical.
 
 ## 1. What to review
 

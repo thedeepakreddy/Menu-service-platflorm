@@ -11,36 +11,39 @@ until the owner approves it.
 
 ## Index
 
-| ID              | Title                                                                   | Status                                 | Date       |
-| --------------- | ----------------------------------------------------------------------- | -------------------------------------- | ---------- |
-| [D-001](#d-001) | Document 05 is the authoritative execution roadmap                      | approved                               | 2026-11-27 |
-| [D-002](#d-002) | Phase sequencing authority and tracking of discrepancies                | approved                               | 2026-11-27 |
-| [D-003](#d-003) | Specification placement and preservation                                | approved                               | 2026-11-27 |
-| [P-101](#p-101) | pnpm workspaces + Turborepo                                             | verified                               | 2026-11-27 |
-| [P-102](#p-102) | Node.js 24 LTS, pinned                                                  | verified                               | 2026-11-27 |
-| [P-103](#p-103) | Strict TypeScript from one shared base                                  | verified                               | 2026-11-27 |
-| [P-104](#p-104) | ESLint flat config + Prettier; dependency-cruiser boundaries            | verified                               | 2026-11-27 |
-| [P-105](#p-105) | Vitest (unit/integration) + Playwright (e2e)                            | verified                               | 2026-11-27 |
-| [P-106](#p-106) | GitHub Actions CI                                                       | verified                               | 2026-11-27 |
-| [P-107](#p-107) | Zod-validated environment, fail fast, `.env.example` only               | verified                               | 2026-11-27 |
-| [P-108](#p-108) | Initial API error envelope and request id convention                    | verified                               | 2026-11-27 |
-| [P-109](#p-109) | Create only `contracts` and `config` packages in Phase 1                | verified                               | 2026-11-27 |
-| [P-110](#p-110) | `CLAUDE.md` operational guide                                           | verified                               | 2026-11-27 |
-| [D-004](#d-004) | TypeScript pinned to 6.0.x (not 7.x)                                    | approved                               | 2026-11-27 |
-| [D-005](#d-005) | 7-day minimum release age for npm packages                              | approved (provisional)                 | 2026-11-27 |
-| [D-006](#d-006) | `@playwright/test` pinned exactly to 1.63.0                             | approved                               | 2026-11-27 |
-| [D-007](#d-007) | `no-extraneous-class` uses `allowWithDecorator` in `apps/api`           | approved (scoped)                      | 2026-11-27 |
-| [D-008](#d-008) | `APP_ENV` required by every app and by build/typecheck/test             | approved                               | 2026-11-27 |
-| [D-009](#d-009) | Web placeholder is marked `noindex`                                     | approved                               | 2026-11-27 |
-| [D-010](#d-010) | Boundary graph: build output followed-not-excluded; anchored exclusions | implemented — awaiting owner review    | 2026-11-27 |
-| [D-011](#d-011) | `packages/contracts` dependency allowlist (zod only, incl. type-only)   | implemented — type-only scope proposed | 2026-11-27 |
-| [D-012](#d-012) | Web app must not import database clients or ORMs                        | implemented — awaiting owner review    | 2026-11-27 |
-| [D-013](#d-013) | `engineStrict: true` enforces the Node.js engine range                  | implemented — awaiting owner review    | 2026-11-27 |
-| [D-014](#d-014) | `packageManager` pinned with a Corepack integrity hash                  | implemented — awaiting owner review    | 2026-11-27 |
-| [D-015](#d-015) | Automated supply-chain policy test                                      | implemented — awaiting owner review    | 2026-11-27 |
-| [D-016](#d-016) | Runtime code must not import test files (R-01)                          | implemented — awaiting owner review    | 2026-11-27 |
-| [D-017](#d-017) | Boundary scan covers all of `tests/` (R-04)                             | implemented — awaiting owner review    | 2026-11-27 |
-| [D-018](#d-018) | Per-command supply-chain overrides are rejected (R-06)                  | implemented — awaiting owner review    | 2026-11-27 |
+| ID              | Title                                                                             | Status                                 | Date       |
+| --------------- | --------------------------------------------------------------------------------- | -------------------------------------- | ---------- |
+| [D-001](#d-001) | Document 05 is the authoritative execution roadmap                                | approved                               | 2026-11-27 |
+| [D-002](#d-002) | Phase sequencing authority and tracking of discrepancies                          | approved                               | 2026-11-27 |
+| [D-003](#d-003) | Specification placement and preservation                                          | approved                               | 2026-11-27 |
+| [P-101](#p-101) | pnpm workspaces + Turborepo                                                       | verified                               | 2026-11-27 |
+| [P-102](#p-102) | Node.js 24 LTS, pinned                                                            | verified                               | 2026-11-27 |
+| [P-103](#p-103) | Strict TypeScript from one shared base                                            | verified                               | 2026-11-27 |
+| [P-104](#p-104) | ESLint flat config + Prettier; dependency-cruiser boundaries                      | verified                               | 2026-11-27 |
+| [P-105](#p-105) | Vitest (unit/integration) + Playwright (e2e)                                      | verified                               | 2026-11-27 |
+| [P-106](#p-106) | GitHub Actions CI                                                                 | verified                               | 2026-11-27 |
+| [P-107](#p-107) | Zod-validated environment, fail fast, `.env.example` only                         | verified                               | 2026-11-27 |
+| [P-108](#p-108) | Initial API error envelope and request id convention                              | verified                               | 2026-11-27 |
+| [P-109](#p-109) | Create only `contracts` and `config` packages in Phase 1                          | verified                               | 2026-11-27 |
+| [P-110](#p-110) | `CLAUDE.md` operational guide                                                     | verified                               | 2026-11-27 |
+| [D-004](#d-004) | TypeScript pinned to 6.0.x (not 7.x)                                              | approved                               | 2026-11-27 |
+| [D-005](#d-005) | 7-day minimum release age for npm packages                                        | approved (provisional)                 | 2026-11-27 |
+| [D-006](#d-006) | `@playwright/test` pinned exactly to 1.63.0                                       | approved                               | 2026-11-27 |
+| [D-007](#d-007) | `no-extraneous-class` uses `allowWithDecorator` in `apps/api`                     | approved (scoped)                      | 2026-11-27 |
+| [D-008](#d-008) | `APP_ENV` required by every app and by build/typecheck/test                       | approved                               | 2026-11-27 |
+| [D-009](#d-009) | Web placeholder is marked `noindex`                                               | approved                               | 2026-11-27 |
+| [D-010](#d-010) | Boundary graph: build output followed-not-excluded; anchored exclusions           | implemented — awaiting owner review    | 2026-11-27 |
+| [D-011](#d-011) | `packages/contracts` dependency allowlist (zod only, incl. type-only)             | implemented — type-only scope proposed | 2026-11-27 |
+| [D-012](#d-012) | Web app must not import database clients or ORMs                                  | implemented — awaiting owner review    | 2026-11-27 |
+| [D-013](#d-013) | `engineStrict: true` enforces the Node.js engine range                            | implemented — awaiting owner review    | 2026-11-27 |
+| [D-014](#d-014) | `packageManager` pinned with a Corepack integrity hash                            | implemented — awaiting owner review    | 2026-11-27 |
+| [D-015](#d-015) | Automated supply-chain policy test                                                | implemented — awaiting owner review    | 2026-11-27 |
+| [D-016](#d-016) | Runtime code must not import test files (R-01)                                    | implemented — awaiting owner review    | 2026-11-27 |
+| [D-017](#d-017) | Boundary scan covers all of `tests/` (R-04)                                       | implemented — awaiting owner review    | 2026-11-27 |
+| [D-018](#d-018) | Per-command supply-chain overrides are rejected (R-06)                            | implemented — awaiting owner review    | 2026-11-27 |
+| [D-019](#d-019) | Security baseline: CORS default-deny allowlist; API/web security headers          | implemented — awaiting owner review    | 2026-11-27 |
+| [D-020](#d-020) | Structured JSON logging with redaction; controlled log levels                     | implemented — awaiting owner review    | 2026-11-27 |
+| [D-021](#d-021) | devDependency rule covers all workspace files (N-01); CLI scan-scope guard (N-02) | implemented — awaiting owner review    | 2026-11-27 |
 
 ---
 
@@ -493,3 +496,82 @@ step-level override was invisible to the effective-settings check.
 **Limits.** An override routed through an indirectly named variable (for example
 `${{ vars.SOMETHING }}` expanding to a flag) or a script outside the workspace is not detected.
 Workflow changes remain subject to review.
+
+---
+
+## Phase 1 completion decisions (D-019 – D-021)
+
+**Authorization evidence:** Owner message "PHASE 1 — COMPLETE REMAINING WORK, CLOSEOUT
+PREPARATION & FINAL VERIFICATION" (2026-11-27). It authorized resolving G-36 and G-38, N-01 and
+N-02, and narrowly scoped Phase 1 remediation. It also said not to approve owner decisions
+silently. Each decision is therefore **awaiting owner review**. Full details are in
+[`security/logging-and-security-baseline.md`](security/logging-and-security-baseline.md).
+
+## D-019
+
+**Title:** Security baseline — CORS and HTTP security headers
+**Status:** implemented — awaiting owner review
+**Decision.**
+
+- `API_CORS_ALLOWED_ORIGINS` (optional) is an exact-origin allowlist. When it is absent or
+  empty, CORS is not enabled.
+- Startup rejects wildcards, `null`, paths, credentials and non-http(s) values, and requires
+  `https://` origins in staging and production.
+- `credentials: false`; methods `GET` and `HEAD` only.
+- The API sends CSP `default-src 'none'; frame-ancestors 'none'`, `nosniff`, `DENY`,
+  `no-referrer`, CORP `same-site`, COOP `same-origin` and `Cache-Control: no-store`, plus HSTS in
+  staging and production.
+- The web app sends `nosniff`, `DENY`, `strict-origin-when-cross-origin`, a restrictive
+  `Permissions-Policy` and COOP, plus HSTS in staging and production.
+
+**Rationale.** G-36 and G-38 (audit M-05): a deliberate, secure-by-default policy before any
+authenticated endpoint exists.
+**Deferred.** The CORS credential model and production origins (Phase 2, with G-04), the web CSP
+(G-31, Phase 3), and HSTS `includeSubDomains`/`preload` (G-06, G-21).
+**Note on P-107.** P-107 requires every variable and allows no silent defaults. The two new
+variables are optional with documented **secure** defaults (deny cross-origin, `info`). This is
+an explicit, reviewable exception, recorded here for owner approval.
+
+## D-020
+
+**Title:** Structured JSON logging with redaction
+**Status:** implemented — awaiting owner review
+**Decision.**
+
+- The API logs JSON lines through a NestJS `LoggerService`, and every entry is deep-redacted:
+  sensitive keys, bearer/basic credentials, JWTs, URL credentials and `key=value` secrets, with
+  length and depth caps.
+- Request logging records method, path without query, status, duration and request id. It never
+  records headers, bodies, query strings, IPs or user agents.
+- 5xx are logged at `error` with the redacted error and stack. 4xx are logged at `info` with
+  status and code only.
+- `API_LOG_LEVEL` is `error|warn|info|debug` (default `info`); `debug` is rejected in staging and
+  production.
+- The exception filter no longer writes responses for non-HTTP contexts or after headers have
+  been sent (audit L-05).
+
+**Rationale.** G-32 and G-38 (audit M-04); Doc 01 §11, Doc 03 §19, Doc 04 §18 and §21.
+**Limits.** Redaction is pattern-based. The primary control is never passing secrets or personal
+data to the logger. Client-supplied request ids remain untrusted correlation hints (L-02, open).
+The observability stack (metrics, tracing, retention) is open (G-32).
+
+## D-021
+
+**Title:** devDependency rule covers all workspace files; architecture CLI scope guard
+**Status:** implemented — awaiting owner review
+**Decision.**
+
+- `no-dev-deps-in-production-code` applies to every file under `apps/<x>/` and `packages/<x>/`,
+  not only `src/`.
+- The only exemptions are test files (`*.test.ts(x)`) and test-tooling config
+  (`^(apps|packages)/[^/]+/vitest.config.*`). `next.config.ts` is not exempt, because
+  `next start` loads it at runtime.
+- `no-runtime-imports-of-test-files` also forbids runtime imports of that tooling config, so the
+  exemption cannot be used for laundering.
+- The architecture suite checks that:
+  - the `pnpm arch` scan targets equal the real-tree scan list;
+  - every `pnpm-workspace.yaml` root is scanned;
+  - CI runs `pnpm arch`;
+  - every top-level exclusion alternative is anchored (H-01).
+
+**Rationale.** Audit findings N-01 and N-02.

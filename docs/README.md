@@ -53,13 +53,14 @@ Verify with: `cd docs/specifications && sha256sum *.pdf`
 
 ## 3. Working documents
 
-| File                             | Purpose                                                                             |
-| -------------------------------- | ----------------------------------------------------------------------------------- |
-| [`DECISIONS.md`](DECISIONS.md)   | Central decision log (proposed / approved / superseded …)                           |
-| [`STATUS.md`](STATUS.md)         | Phase status ledger and implementation ledger                                       |
-| [`GAPS.md`](GAPS.md)             | Unresolved specification gaps, conflicts and open questions                         |
-| [`architecture/`](architecture/) | Architecture notes, phase mapping and future architecture decision records          |
-| [`audit/`](audit/)               | Phase 1 review packet and the audit findings register (`phase-1-audit-findings.md`) |
+| File                             | Purpose                                                                                        |
+| -------------------------------- | ---------------------------------------------------------------------------------------------- |
+| [`DECISIONS.md`](DECISIONS.md)   | Central decision log (proposed / approved / superseded …)                                      |
+| [`STATUS.md`](STATUS.md)         | Phase status ledger and implementation ledger                                                  |
+| [`GAPS.md`](GAPS.md)             | Unresolved specification gaps, conflicts and open questions                                    |
+| [`architecture/`](architecture/) | Architecture notes, phase mapping, and supplement **S-02** to Doc 02 (PROPOSED, G-01)          |
+| [`audit/`](audit/)               | Phase 1 review packet, audit findings register, closure package and independent-audit hand-off |
+| [`security/`](security/)         | Phase 1 logging and security baseline (D-019, D-020)                                           |
 
 ## 4. Status vocabulary
 

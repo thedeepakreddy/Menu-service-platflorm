@@ -47,6 +47,9 @@ them, the documents in `docs/` win and this file should be corrected.
   row, or if a workflow or `package.json` script overrides them per command (R-06).
 - `APP_ENV` (`development | test | staging | production`) is required by both apps and by any
   command that loads the Next.js config (build, typecheck, tests). Export it in your shell.
+- The API also accepts two optional variables with secure defaults: `API_CORS_ALLOWED_ORIGINS`
+  (exact origins; absent = no cross-origin access) and `API_LOG_LEVEL` (default `info`; `debug`
+  rejected in staging and production). See `apps/api/.env.example`.
 
 ## Commands (run from the repository root)
 
@@ -65,17 +68,17 @@ CI (`.github/workflows/ci.yml`) runs all of the above in that order.
 
 ## Repository layout
 
-| Path                 | Contents                                                                         |
-| -------------------- | -------------------------------------------------------------------------------- |
-| `apps/api`           | NestJS API (ESM). Domain modules in `src/modules/<name>/`, public via `index.ts` |
-| `apps/web`           | Next.js App Router + Tailwind                                                    |
-| `packages/contracts` | Framework-free Zod schemas and types shared by apps                              |
-| `packages/config`    | Shared TypeScript and ESLint presets                                             |
-| `tests/architecture` | Boundary rules and tests, including deliberate-violation fixtures                |
-| `tests/startup`      | Proves the built apps refuse invalid configuration                               |
-| `tests/policy`       | Supply-chain policy checks (release age, engine-strict, pinned pnpm, exclusions) |
-| `tests/e2e`          | Playwright smoke tests                                                           |
-| `docs/`              | Specifications, decisions, status, gaps                                          |
+| Path                 | Contents                                                                          |
+| -------------------- | --------------------------------------------------------------------------------- |
+| `apps/api`           | NestJS API (ESM). Domain modules in `src/modules/<name>/`, public via `index.ts`  |
+| `apps/web`           | Next.js App Router + Tailwind                                                     |
+| `packages/contracts` | Framework-free Zod schemas and types shared by apps                               |
+| `packages/config`    | Shared TypeScript and ESLint presets                                              |
+| `tests/architecture` | Boundary rules and tests, including deliberate-violation fixtures                 |
+| `tests/startup`      | Proves the built apps refuse invalid configuration                                |
+| `tests/policy`       | Supply-chain policy checks (release age, engine-strict, pinned pnpm, exclusions)  |
+| `tests/e2e`          | Playwright smoke tests                                                            |
+| `docs/`              | Specifications, decisions, status, gaps, architecture supplement, security, audit |
 
 ## Boundary rules (enforced by `pnpm arch` and `pnpm test`)
 
@@ -86,9 +89,10 @@ import forms: value, type-only, dynamic, re-export and `typeof import()`, wherev
 - Apps never import each other; share code through `packages/`. Packages never import apps.
 - Apps consume packages through their public entry only: never `packages/*/src/`, and no source
   file imports workspace build output (`dist/`, `.next/`) by a relative path.
-- Runtime code never imports `tests/` or a test file (`*.test.*`, `*.spec.*`, `__tests__/`), and
-  never imports devDependencies (type-only imports are allowed). Test files may import other test
-  files. `tests/architecture/build-output.test.ts` also checks that no test file is emitted into
+- Runtime code never imports `tests/`, a test file (`*.test.*`, `*.spec.*`, `__tests__/`) or
+  test-tooling config (`vitest.config.*`). No workspace file except tests and `vitest.config.*`
+  imports devDependencies, wherever it lives: `src/`, `lib/`, or runtime config such as
+  `next.config.ts` (type-only imports are allowed). Test files may import other test files. `tests/architecture/build-output.test.ts` also checks that no test file is emitted into
   `packages/contracts/dist` or `apps/api/dist`.
 - `packages/contracts` runtime code may import only its own sources and `zod`: no Node built-ins,
   frameworks, DB clients, HTTP clients or other packages, including type-only imports (D-011).
@@ -105,7 +109,8 @@ import forms: value, type-only, dynamic, re-export and `typeof import()`, wherev
 - A package installed under the name `zod` through an `npm:` alias (R-10).
 
 Rules live in `tests/architecture/dependency-cruiser.config.cjs`. `pnpm arch` scans `apps/`,
-`packages/` and all of `tests/` (except the fixtures). Build output and `node_modules` are
+`packages/` and all of `tests/` (except the fixtures); a test keeps that list equal to the
+real-tree test's scan list (N-02). Build output and `node_modules` are
 `doNotFollow` (kept in the graph, not traversed). Exclusions must stay anchored to workspace paths,
 and the graph-integrity tests fail if an exclusion ever drops a dependency edge (audit H-01).
 Fixtures live in `tests/architecture/fixtures/`: `rules/<rule-name>/` breaks exactly that rule, and
@@ -119,6 +124,13 @@ expectations, or the suite fails.
   generic. Details go to server logs with the request id.
 - Configuration is validated with Zod at startup. Error output names variables, never values.
   Commit only `.env.example`.
+- **Logging (D-020):** the API logs JSON lines through `JsonLogger`, and every entry is redacted.
+  Never pass headers, cookies, bodies, query strings, client IPs, tokens or personal data to the
+  logger; redaction is a second line of defence, not permission. See
+  `docs/security/logging-and-security-baseline.md`.
+- **Security baseline (D-019):** CORS is default-deny with an exact-origin allowlist and no
+  credentials. Security headers are set on every API response and web route. Do not loosen
+  either without a recorded decision.
 - NestJS constructor injection works in Vitest (the transform honours `emitDecoratorMetadata`);
   `apps/api/src/di.test.ts` guards this.
 

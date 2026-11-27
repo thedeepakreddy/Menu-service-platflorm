@@ -7,9 +7,10 @@ recorded as an `approved` decision in [`../DECISIONS.md`](../DECISIONS.md).
 
 ## Contents
 
-| File                                   | Purpose                                                                                                                |
-| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| [`phase-mapping.md`](phase-mapping.md) | Crosswalk of Doc 05 Phases 0–10 against Doc 01 Phases A–J and Doc 04 Stages A–G, plus tracked sequencing discrepancies |
+| File                                                                                                       | Purpose                                                                                                                                                  |
+| ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`phase-mapping.md`](phase-mapping.md)                                                                     | Crosswalk of Doc 05 Phases 0–10 against Doc 01 Phases A–J and Doc 04 Stages A–G, plus tracked sequencing discrepancies                                   |
+| [`architecture-technical-specification-supplement.md`](architecture-technical-specification-supplement.md) | Supplement S-02 to Doc 02: traceability of every architecture topic to its source; open choices marked OPEN. **PROPOSED, pending owner approval (G-01)** |
 
 ## What Document 02 does establish (v1.0, §1–§4)
 
