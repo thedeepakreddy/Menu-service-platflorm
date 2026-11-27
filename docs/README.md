@@ -59,6 +59,7 @@ Verify with: `cd docs/specifications && sha256sum *.pdf`
 | [`STATUS.md`](STATUS.md)         | Phase status ledger and implementation ledger                              |
 | [`GAPS.md`](GAPS.md)             | Unresolved specification gaps, conflicts and open questions                |
 | [`architecture/`](architecture/) | Architecture notes, phase mapping and future architecture decision records |
+| [`audit/`](audit/)               | Independent review packets (Phase 1 audit pending)                         |
 
 ## 4. Status vocabulary
 
