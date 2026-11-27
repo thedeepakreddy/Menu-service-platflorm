@@ -4,13 +4,14 @@ import { parseWebEnv } from './src/env';
 import { webSecurityHeaders } from './src/security-headers';
 
 // Fail fast on invalid configuration (P-107).
-const env = parseWebEnv(process.env);
+parseWebEnv(process.env);
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
-  // Security baseline headers on every route (D-019).
-  headers: () => Promise.resolve([{ source: '/:path*', headers: webSecurityHeaders(env.APP_ENV) }]),
+  // Environment-independent security headers on every route (D-019). HSTS depends
+  // on the runtime APP_ENV and is set per request by src/proxy.ts (audit F-04).
+  headers: () => Promise.resolve([{ source: '/:path*', headers: webSecurityHeaders() }]),
 };
 
 export default nextConfig;
