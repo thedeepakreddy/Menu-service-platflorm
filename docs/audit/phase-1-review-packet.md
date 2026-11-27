@@ -13,6 +13,7 @@ evidence.
 > `engines` was not enforced (L-01). See [`phase-1-audit-findings.md`](phase-1-audit-findings.md)
 > for every finding and its status. This packet is kept as the record of what was handed to the
 > auditor.
+> A later remediation audit (R-01 – R-10) is recorded in the same register.
 
 ## 1. What to review
 

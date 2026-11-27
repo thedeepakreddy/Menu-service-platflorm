@@ -38,6 +38,9 @@ until the owner approves it.
 | [D-013](#d-013) | `engineStrict: true` enforces the Node.js engine range                  | implemented — awaiting owner review    | 2026-11-27 |
 | [D-014](#d-014) | `packageManager` pinned with a Corepack integrity hash                  | implemented — awaiting owner review    | 2026-11-27 |
 | [D-015](#d-015) | Automated supply-chain policy test                                      | implemented — awaiting owner review    | 2026-11-27 |
+| [D-016](#d-016) | Runtime code must not import test files (R-01)                          | implemented — awaiting owner review    | 2026-11-27 |
+| [D-017](#d-017) | Boundary scan covers all of `tests/` (R-04)                             | implemented — awaiting owner review    | 2026-11-27 |
+| [D-018](#d-018) | Per-command supply-chain overrides are rejected (R-06)                  | implemented — awaiting owner review    | 2026-11-27 |
 
 ---
 
@@ -358,6 +361,19 @@ output not policed) and M-02 (root and bootstrap files could bypass a module's `
 graph-integrity tests comparing the configured graph against an unexcluded baseline. Restoring
 the original exclusion makes 7 tests fail.
 
+_Correction (2026-11-27, remediation audit R-02, R-03, R-09):_ the wording above overstated two
+guarantees.
+
+- `no-workspace-build-output-imports` rejects **relative-path** imports of build output, including
+  `require()`, `import()` type queries and symlinked paths. It does **not** reject an
+  **absolute-path** import into a package's build output, because dependency-cruiser types that as
+  `undetermined`, not `local` (R-03, open). An absolute import into another app's build output is
+  still rejected by `no-cross-app-imports`.
+- `api-module-entry-only` originally exempted every file under `src/modules/`, so a file
+  directly in `src/modules/` (a registry or barrel) could reach module internals (R-02). Since
+  the residual remediation it exempts only files inside `src/modules/<name>/` ([D-016](#d-016)
+  records the companion R-01 rule). Both changes are covered by fixtures.
+
 ## D-011
 
 **Title:** `packages/contracts` dependency allowlist
@@ -424,3 +440,56 @@ pnpm 12.22.0: a lockfile created with the policy disabled, and then installed wi
 `--frozen-lockfile` with the policy enabled, fails with `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`.
 pnpm verifies the lockfile against the active policy itself. D-015 therefore protects the inputs
 that pnpm check depends on (the settings and the exclusions), rather than duplicating it.
+
+---
+
+## Phase 1 residual remediation decisions (D-016 – D-018)
+
+**Authorization evidence:** Owner message "Phase 1 Audit Residual Remediation — R-01 and R-02"
+(2026-11-27). R-01 and R-02 were mandatory; R-04 and R-06 were optional if narrow. No Phase 2 work
+is included.
+
+## D-016
+
+**Title:** Runtime code must not import test files
+**Status:** implemented — awaiting owner review
+**Decision.** New rule `no-runtime-imports-of-test-files`: no non-test file under `apps/` or
+`packages/` may import a test file. A test file is matched by `(\.(test|spec)\.[cm]?[jt]sx?$)` or
+a `/__tests__/` path segment, and the rule covers value, type-only, dynamic, re-export and
+`typeof import()` forms. Test files may import other test files. The existing test-file
+exemptions in `contracts-allowlist` and `no-dev-deps-in-production-code` are **kept unchanged**:
+tests still need devDependencies, and contract tests may use test helpers. With this rule those
+exemptions can no longer be reached from runtime code. As an outcome check,
+`tests/architecture/build-output.test.ts` asserts that `packages/contracts/dist` and
+`apps/api/dist` contain no emitted test files.
+**Rationale.** Remediation-audit finding R-01: a runtime file re-exporting a `*.test.ts` file
+passed every gate, and `tsc` emitted the test file, with its forbidden `node:http` import, into
+`dist/`. `exclude` in `tsconfig.build.json` filters entry points only.
+**Also changed (R-02):** `api-module-entry-only` now exempts only `src/modules/<name>/`, so files
+directly under `src/modules/` must use module entry points (see the D-010 correction).
+
+## D-017
+
+**Title:** Boundary scan covers all of `tests/`
+**Status:** implemented — awaiting owner review
+**Decision.** `pnpm arch` and the real-repository test cruise `apps packages tests`, instead of
+only `tests/architecture` and `tests/e2e`. Fixtures stay excluded. The scanned `tests/` modules
+are exactly the eight source files (architecture, e2e, policy, startup and the Vitest config), and
+the test asserts that `tests/startup/` and `tests/policy/` are included (remediation audit R-04).
+
+## D-018
+
+**Title:** Per-command supply-chain overrides are rejected
+**Status:** implemented — awaiting owner review
+**Decision.** `tests/policy/supply-chain-policy.test.ts` scans every `.github/workflows/*.yml`
+line, and the scripts in every workspace `package.json`, for
+`minimum[-_.]?release[-_.]?age` and `engine[-_.]?strict`. That covers
+`pnpm_config_minimum_release_age`, `--config.minimumReleaseAge`, `minimumReleaseAgeExclude` and
+`pnpm_config_engine_strict`. These settings may be set only in `pnpm-workspace.yaml`, where
+D-015 verifies them.
+**Rationale.** Remediation audit R-06: `pnpm_config_minimum_release_age=0` or
+`--config.minimumReleaseAge=0` disables the release-age check on a frozen install, and a
+step-level override was invisible to the effective-settings check.
+**Limits.** An override routed through an indirectly named variable (for example
+`${{ vars.SOMETHING }}` expanding to a flag) or a script outside the workspace is not detected.
+Workflow changes remain subject to review.

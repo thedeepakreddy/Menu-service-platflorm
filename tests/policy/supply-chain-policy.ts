@@ -79,3 +79,38 @@ export function checkSupplyChainPolicy(input: PolicyInput): string[] {
 
   return problems;
 }
+
+/**
+ * Settings that disable or weaken D-005 / L-01 when overridden per command:
+ * `pnpm_config_minimum_release_age=0`, `--config.minimumReleaseAge=0`,
+ * `minimumReleaseAgeExclude`, `pnpm_config_engine_strict=false`, and so on
+ * (audit R-06). Overrides must live only in pnpm-workspace.yaml, where
+ * checkSupplyChainPolicy verifies them.
+ */
+const POLICY_OVERRIDE = /minimum[-_.]?release[-_.]?age|engine[-_.]?strict/i;
+
+export type TextFile = { path: string; text: string };
+
+/**
+ * Returns a problem for every workflow line or package.json script that
+ * overrides a supply-chain policy setting. Returns an empty list when clean.
+ */
+export function findPolicyOverrides(workflows: TextFile[], packageJsons: TextFile[]): string[] {
+  const problems: string[] = [];
+  for (const file of workflows) {
+    file.text.split('\n').forEach((line, index) => {
+      if (POLICY_OVERRIDE.test(line)) {
+        problems.push(`${file.path}:${String(index + 1)} overrides a supply-chain setting (R-06)`);
+      }
+    });
+  }
+  for (const file of packageJsons) {
+    const scripts = (JSON.parse(file.text) as { scripts?: Record<string, unknown> }).scripts ?? {};
+    for (const [name, command] of Object.entries(scripts)) {
+      if (typeof command === 'string' && POLICY_OVERRIDE.test(command)) {
+        problems.push(`${file.path} script "${name}" overrides a supply-chain setting (R-06)`);
+      }
+    }
+  }
+  return problems;
+}

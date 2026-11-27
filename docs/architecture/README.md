@@ -25,7 +25,11 @@ These points are taken directly from Document 02. They are baseline statements, 
 The architecture rules that Phase 1 enforces in CI are listed in `CLAUDE.md` ("Boundary rules")
 and defined in `tests/architecture/dependency-cruiser.config.cjs`. Each has a per-rule regression
 fixture under `tests/architecture/fixtures/rules/`. The rule set was corrected and extended by the
-Phase 1 audit remediation (D-010 – D-012; findings H-01, M-01 – M-03).
+Phase 1 audit remediation (D-010 – D-012; findings H-01, M-01 – M-03) and the residual
+remediation (D-016 – D-017; findings R-01, R-02, R-04). The rules cover the import forms
+dependency-cruiser can detect statically. Known limitations (computed `require()` paths,
+absolute-path build-output imports, the DB-client denylist, alias installs) are listed in
+`CLAUDE.md` and `docs/audit/phase-1-audit-findings.md`.
 
 ## Conventions for future architecture records
 

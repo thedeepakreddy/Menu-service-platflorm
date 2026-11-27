@@ -43,7 +43,8 @@ them, the documents in `docs/` win and this file should be corrected.
   with `corepack enable`.
 - New package versions must be at least 7 days old (`minimumReleaseAge` in `pnpm-workspace.yaml`,
   D-005). pnpm also re-checks the lockfile against it on `--frozen-lockfile` installs.
-  `tests/policy/` fails if these settings are weakened or an exclusion lacks a D-005 override-log row.
+  `tests/policy/` fails if these settings are weakened, if an exclusion lacks a D-005 override-log
+  row, or if a workflow or `package.json` script overrides them per command (R-06).
 - `APP_ENV` (`development | test | staging | production`) is required by both apps and by any
   command that loads the Next.js config (build, typecheck, tests). Export it in your shell.
 
@@ -78,24 +79,35 @@ CI (`.github/workflows/ci.yml`) runs all of the above in that order.
 
 ## Boundary rules (enforced by `pnpm arch` and `pnpm test`)
 
-Twelve rules, each with a permanent per-rule regression fixture:
+Thirteen rules. Each has a permanent per-rule regression fixture that proves it rejects the listed
+import forms: value, type-only, dynamic, re-export and `typeof import()`, wherever they apply.
 
 - No circular imports; every import must resolve.
 - Apps never import each other; share code through `packages/`. Packages never import apps.
 - Apps consume packages through their public entry only: never `packages/*/src/`, and no source
-  file imports any workspace build output (`dist/`, `.next/`) by path.
-- Runtime code never imports `tests/`, and never imports devDependencies (type-only imports are
-  allowed).
+  file imports workspace build output (`dist/`, `.next/`) by a relative path.
+- Runtime code never imports `tests/` or a test file (`*.test.*`, `*.spec.*`, `__tests__/`), and
+  never imports devDependencies (type-only imports are allowed). Test files may import other test
+  files. `tests/architecture/build-output.test.ts` also checks that no test file is emitted into
+  `packages/contracts/dist` or `apps/api/dist`.
 - `packages/contracts` runtime code may import only its own sources and `zod`: no Node built-ins,
   frameworks, DB clients, HTTP clients or other packages, including type-only imports (D-011).
-- `apps/web` must not import database clients or ORMs (a denylist; extend it when adding DB
-  infrastructure, D-012).
-- An API module may use another module only through its `index.ts`, and so must every other
-  `apps/api` file (root, bootstrap, tests, config).
+- `apps/web` must not import the listed database clients and ORMs (a denylist; extend it when
+  adding DB infrastructure, D-012).
+- An API module may use another module only through its `index.ts`. So must every other `apps/api`
+  file: root, bootstrap, tests, config, and files directly under `src/modules/`.
 
-Rules live in `tests/architecture/dependency-cruiser.config.cjs`. Build output and `node_modules`
-are `doNotFollow` (kept in the graph, not traversed). Exclusions must stay anchored to workspace
-paths, and the graph-integrity tests fail if an exclusion ever drops a dependency edge (audit H-01).
+**Known limitations.** These are not prevented today; see `docs/audit/phase-1-audit-findings.md`.
+
+- Imports the tool cannot see statically, such as a `require()` with a computed path (L-04).
+- An absolute-path import into a package's build output (R-03).
+- Database clients missing from the D-012 denylist (R-05).
+- A package installed under the name `zod` through an `npm:` alias (R-10).
+
+Rules live in `tests/architecture/dependency-cruiser.config.cjs`. `pnpm arch` scans `apps/`,
+`packages/` and all of `tests/` (except the fixtures). Build output and `node_modules` are
+`doNotFollow` (kept in the graph, not traversed). Exclusions must stay anchored to workspace paths,
+and the graph-integrity tests fail if an exclusion ever drops a dependency edge (audit H-01).
 Fixtures live in `tests/architecture/fixtures/`: `rules/<rule-name>/` breaks exactly that rule, and
 `valid/` must pass. Do not "fix" them. Adding a rule requires adding its fixture directory and
 expectations, or the suite fails.

@@ -1,5 +1,5 @@
 // Module-boundary rules (Doc 02 §3, decision P-104; remediated per audit
-// findings H-01, M-01, M-02, M-03 and decision D-010).
+// findings H-01, M-01, M-02, M-03 (D-010 – D-012) and R-01, R-02, R-04 (D-016 – D-017)).
 // Paths are relative to the repository root, or to a fixture root in the
 // architecture regression tests. Every rule here must have a fixture directory
 // under tests/architecture/fixtures/rules/<rule-name>/; the test suite fails
@@ -7,6 +7,13 @@
 
 /** Workspace build output: kept in the graph as targets, never followed. */
 const WORKSPACE_BUILD_OUTPUT = '^(apps|packages)/[^/]+/(dist|\\.next)/';
+
+/**
+ * Test files, by any common naming convention: `*.test.*`, `*.spec.*`
+ * (js/ts, optionally jsx/tsx, cjs/mjs/cts/mts) and anything under a
+ * `__tests__/` directory (audit R-01, D-016).
+ */
+const TEST_FILE = '(\\.(test|spec)\\.[cm]?[jt]sx?$)|(/__tests__/)';
 
 /** Database clients and ORMs the web app must never import (M-03, D-012). */
 const DB_CLIENTS = [
@@ -79,6 +86,18 @@ module.exports = {
       to: { path: WORKSPACE_BUILD_OUTPUT, dependencyTypes: ['local'] },
     },
     {
+      name: 'no-runtime-imports-of-test-files',
+      severity: 'error',
+      comment:
+        'Non-test workspace code must never import a test file. Test files are exempt from ' +
+        'the contracts allowlist and the devDependency rule, and a build follows imports even ' +
+        'into files its tsconfig excludes, so such an import would launder forbidden ' +
+        'dependencies into production output (audit R-01, D-016). Test files may import ' +
+        'other test files.',
+      from: { path: '^(apps|packages)/', pathNot: TEST_FILE },
+      to: { path: TEST_FILE },
+    },
+    {
       name: 'production-code-must-not-import-tests',
       severity: 'error',
       from: { path: '^(apps|packages)/' },
@@ -116,9 +135,12 @@ module.exports = {
       name: 'api-module-entry-only',
       severity: 'error',
       comment:
-        'Files outside apps/api/src/modules/ (root, bootstrap, tests, config) may use a module ' +
-        'only through its index.ts.',
-      from: { path: '^apps/api/', pathNot: '^apps/api/src/modules/' },
+        'Every apps/api file outside a module directory (root, bootstrap, tests, config, and ' +
+        'files directly under src/modules/ such as a registry or barrel) may use a module ' +
+        "only through its index.ts. A module's own files are governed by " +
+        'api-module-encapsulation instead (audit M-02, R-02).',
+      // Exempt only files inside src/modules/<name>/, not src/modules/ itself (R-02).
+      from: { path: '^apps/api/', pathNot: '^apps/api/src/modules/[^/]+/' },
       to: {
         path: '^apps/api/src/modules/[^/]+/',
         pathNot: '^apps/api/src/modules/[^/]+/index\\.ts$',

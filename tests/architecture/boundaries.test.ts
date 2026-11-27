@@ -14,8 +14,14 @@ const ruleNames = rules.map((rule) => rule.name ?? '(unnamed)');
 const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
 const fixturesRoot = fileURLToPath(new URL('./fixtures/', import.meta.url));
 
-/** Source directories of the real repository (what `pnpm arch` cruises). */
-const REPO_PATHS = ['apps', 'packages', 'tests/architecture', 'tests/e2e'];
+/**
+ * Source directories of the real repository (what `pnpm arch` cruises). All of
+ * tests/ is included (audit R-04); its fixtures are excluded by the config.
+ */
+const REPO_PATHS = ['apps', 'packages', 'tests'];
+
+/** Same test-file convention as the config's TEST_FILE (R-01). */
+const TEST_FILE = /(\.(test|spec)\.[cm]?[jt]sx?$)|(\/__tests__\/)/;
 
 async function run(
   baseDir: string,
@@ -98,8 +104,23 @@ const EXPECTED: Record<string, string[]> = {
   'api-module-entry-only': [
     'apps/api/src/bootstrap/create-app.ts',
     'apps/api/src/main.ts',
+    // R-02: files directly under src/modules/ (a registry and a re-exporting barrel).
+    'apps/api/src/modules/barrel.ts',
+    'apps/api/src/modules/registry.ts',
     'apps/api/src/root.test.ts',
     'apps/api/vitest.config.ts',
+  ],
+  // R-01: re-export, value, type-only, dynamic and `typeof import()` forms, plus
+  // the *.spec.*, __tests__/ and .tsx naming conventions.
+  'no-runtime-imports-of-test-files': [
+    'apps/api/src/dynamic.ts',
+    'apps/api/src/type-only.ts',
+    'apps/api/src/type-query.ts',
+    'apps/api/src/uses-spec.ts',
+    'apps/api/src/uses-tests-dir.ts',
+    'apps/api/src/value.ts',
+    'apps/web/src/component.tsx',
+    'packages/contracts/src/laundered.ts',
   ],
   'not-to-unresolvable': ['packages/shared/src/unresolvable.ts'],
   'no-dev-deps-in-production-code': ['apps/api/src/dynamic-dev.ts', 'apps/api/src/uses-dev.ts'],
@@ -166,10 +187,35 @@ describe('real repository', () => {
         'apps/api/src/main.ts',
         'apps/web/src/app/page.tsx',
         'packages/contracts/src/index.ts',
+        // R-04: every tests/ area is scanned, not only architecture/ and e2e/.
+        'tests/startup/env-rejection.test.ts',
+        'tests/policy/supply-chain-policy.ts',
+        'tests/vitest.config.ts',
       ]),
     );
     // ...and the fixtures must not be.
     expect(sources(result).filter((s) => s.startsWith('tests/architecture/fixtures/'))).toEqual([]);
+  });
+
+  it('no non-test workspace file reaches a test file through any chain of imports (R-01)', async () => {
+    const result = await run(repoRoot, REPO_PATHS);
+    const byId = new Map(result.modules.map((m) => [m.source, m]));
+    const isWorkspace = (s: string) => /^(apps|packages)\//.test(s);
+    const runtimeRoots = result.modules
+      .map((m) => m.source)
+      .filter((s) => isWorkspace(s) && !TEST_FILE.test(s));
+    expect(runtimeRoots.length).toBeGreaterThan(0);
+    const reached = new Set<string>();
+    const queue = [...runtimeRoots];
+    while (queue.length > 0) {
+      const current = queue.pop();
+      if (current === undefined || reached.has(current)) continue;
+      reached.add(current);
+      for (const dep of byId.get(current)?.dependencies ?? []) {
+        if (isWorkspace(dep.resolved)) queue.push(dep.resolved);
+      }
+    }
+    expect([...reached].filter((s) => TEST_FILE.test(s))).toEqual([]);
   });
 
   describe('graph integrity (H-01)', () => {
@@ -218,7 +264,7 @@ describe('real repository', () => {
       };
       const isSource = (e: Edge) =>
         /^(apps|packages)\/[^/]+\/src\//.test(e.from) ||
-        /^tests\/(architecture|e2e)\//.test(e.from);
+        /^tests\/(architecture|e2e|startup|policy)\//.test(e.from);
       const key = (e: Edge) => `${e.from} -> ${e.resolved}`;
       const configured = new Set((await edges(config.options)).filter(isSource).map(key));
       const baseline = (await edges(baselineOptions)).filter(isSource).map(key);

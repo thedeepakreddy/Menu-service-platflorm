@@ -6,7 +6,7 @@
   "description": "Cross-cutting architecture and end-to-end tests.",
   "scripts": {
     "test": "vitest run",
-    "arch": "cd .. && depcruise --config tests/architecture/dependency-cruiser.config.cjs --ts-config tsconfig.base.json apps packages tests/architecture tests/e2e",
+    "arch": "cd .. && depcruise --config tests/architecture/dependency-cruiser.config.cjs --ts-config tsconfig.base.json apps packages tests",
     "e2e": "playwright test --config e2e/playwright.config.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
