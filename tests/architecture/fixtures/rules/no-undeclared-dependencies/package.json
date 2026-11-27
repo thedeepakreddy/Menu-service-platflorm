@@ -1,0 +1,8 @@
+{
+  "name": "fixture-root",
+  "version": "0.0.0-fixture",
+  "private": true,
+  "devDependencies": {
+    "rootdevlib": "0.0.0-fixture"
+  }
+}

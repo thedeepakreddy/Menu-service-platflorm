@@ -82,8 +82,9 @@ CI (`.github/workflows/ci.yml`) runs all of the above in that order.
 
 ## Boundary rules (enforced by `pnpm arch` and `pnpm test`)
 
-Thirteen rules. Each has a permanent per-rule regression fixture that proves it rejects the listed
-import forms: value, type-only, dynamic, re-export and `typeof import()`, wherever they apply.
+Fourteen rules, all at severity `error` (a test enforces this). Each has a permanent per-rule
+regression fixture that proves it rejects the listed import forms: value, type-only, dynamic,
+re-export and `typeof import()`, wherever they apply.
 
 - No circular imports; every import must resolve.
 - Apps never import each other; share code through `packages/`. Packages never import apps.
@@ -94,6 +95,9 @@ import forms: value, type-only, dynamic, re-export and `typeof import()`, wherev
   imports devDependencies, wherever it lives: `src/`, `lib/`, or runtime config such as
   `next.config.ts` (type-only imports are allowed). Test files may import other test files. `tests/architecture/build-output.test.ts` also checks that no test file is emitted into
   `packages/contracts/dist` or `apps/api/dist`.
+- Every npm package a workspace file imports (apps, packages and tests; any import form) must be
+  declared in that file's closest `package.json`. A package that only resolves through the hoisted
+  root `node_modules`, such as a root devDependency, is rejected (audit F-02, D-021).
 - `packages/contracts` runtime code may import only its own sources and `zod`: no Node built-ins,
   frameworks, DB clients, HTTP clients or other packages, including type-only imports (D-011).
 - `apps/web` must not import the listed database clients and ORMs (a denylist; extend it when

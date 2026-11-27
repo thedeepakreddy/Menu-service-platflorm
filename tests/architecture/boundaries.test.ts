@@ -125,6 +125,17 @@ const EXPECTED: Record<string, string[]> = {
     'packages/contracts/src/laundered.ts',
   ],
   'not-to-unresolvable': ['packages/shared/src/unresolvable.ts'],
+  // F-02: undeclared packages (typed npm-no-pkg), e.g. a hoisted root devDependency,
+  // in every import form and every workspace location, tests included.
+  'no-undeclared-dependencies': [
+    'apps/api/src/dynamic-undeclared.ts',
+    'apps/api/src/type-only-undeclared.ts',
+    'apps/api/src/uses-root-devdep.ts',
+    'apps/web/lib/uses-root-devdep.ts',
+    'packages/shared/src/uses-phantom.ts',
+    'tests/helper.test.ts',
+  ],
+
   'no-dev-deps-in-production-code': [
     'apps/api/src/dynamic-dev.ts',
     'apps/api/src/uses-dev.ts',
@@ -135,6 +146,12 @@ const EXPECTED: Record<string, string[]> = {
 };
 
 describe('rule inventory', () => {
+  // Found while verifying F-02: a rule downgraded to `warn` still reports in the
+  // fixtures, but `pnpm arch` exits 0 on warnings, so CI would stop enforcing it.
+  it('every rule is an error, so `pnpm arch` fails on any violation', () => {
+    expect(rules.filter((rule) => rule.severity !== 'error').map((rule) => rule.name)).toEqual([]);
+  });
+
   it('every configured rule has expectations and a fixture tree, and vice versa', () => {
     const fixtureDirs = topLevel(`${fixturesRoot}rules`).sort();
     expect([...ruleNames].sort()).toEqual(fixtureDirs);

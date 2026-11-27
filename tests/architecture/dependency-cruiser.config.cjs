@@ -1,5 +1,6 @@
 // Module-boundary rules (Doc 02 §3, decision P-104; remediated per audit
-// findings H-01, M-01, M-02, M-03 (D-010 – D-012) and R-01, R-02, R-04 (D-016 – D-017)).
+// findings H-01, M-01, M-02, M-03 (D-010 – D-012), R-01, R-02, R-04 (D-016 – D-017)
+// and F-02 (D-021 amendment)).
 // Paths are relative to the repository root, or to a fixture root in the
 // architecture regression tests. Every rule here must have a fixture directory
 // under tests/architecture/fixtures/rules/<rule-name>/; the test suite fails
@@ -162,6 +163,19 @@ module.exports = {
       comment: 'Every import must resolve.',
       from: {},
       to: { couldNotResolve: true },
+    },
+    {
+      name: 'no-undeclared-dependencies',
+      severity: 'error',
+      comment:
+        'Every npm package a workspace file imports must be declared in the package.json ' +
+        "closest to that file (dependency-cruiser's no-non-package-json). Without this, a " +
+        'package that only resolves through the hoisted root node_modules (for example a ' +
+        'root devDependency such as prettier) is typed npm-no-pkg, escapes ' +
+        'no-dev-deps-in-production-code, and is emitted into production output (audit F-02, ' +
+        'D-021). Applies to all import forms, including type-only, and to tests.',
+      from: { path: '^(apps|packages|tests)/' },
+      to: { dependencyTypes: ['npm-no-pkg', 'npm-unknown'] },
     },
     {
       name: 'no-dev-deps-in-production-code',
