@@ -543,7 +543,7 @@ conditional on this gate; it starts with the G-03 – G-08 entry decisions.
 | M2.3 Identity and authorization boundary | done; CI verified        | `e5933cc`, CI #15 (`45952916611`) success: jose verifier (RS256/ES256 only, iss/aud/exp/nbf/iat), separate owner/operator trust domains, operator MFA, `app.find_account` (no auto-creation), owner access only via an active membership read under RLS; 15 real-PostgreSQL + 11 unit tests |
 | M2.4 Provisioning and lifecycle          | done (local); CI pending | see "M2.4 verification": operator-only audited SECURITY DEFINER provisioning and compare-and-set lifecycle; separate operator credential; 32 real-PostgreSQL tests                                                                                                                          |
 | M2.5 Abuse controls                      | done (local); CI pending | see "M2.5 verification": in-process fixed-window limits before authentication, bounded fail-closed key table; instance-local only (D-031)                                                                                                                                                   |
-| M2.6 Web BFF session                     | in progress              | vendor direction D-032 (ZITADEL Cloud EU, conditional); design D-033; API operator MFA proof done (see below); web BFF next                                                                                                                                                                 |
+| M2.6 Web BFF session                     | done (local); CI pending | D-032 (ZITADEL, conditional), D-033; API operator MFA proof `3b54808`; web BFF login: see "M2.6 verification"                                                                                                                                                                               |
 
 ### M2.1 verification (local, Node 24.22.3, PostgreSQL 16.15 loopback cluster, scram-sha-256)
 
@@ -608,3 +608,24 @@ items UNCONFIRMED). Key finding: ZITADEL carries `amr` only in ID tokens, so the
 for operators, the access token plus the ID token as `X-Authentication-Proof` (same issuer and
 subject, `amr` contains `mfa`, recent `auth_time`) — D-033. All gates exit 0: `test` 299, `test:db`
 **105**. Mutation caught: dropping the same-subject check (1 test).
+
+### M2.6 (part 2) — web BFF login (local)
+
+`apps/web/src/auth/`: owner and operator login with the authorization-code flow, PKCE (S256),
+`state` and `nonce` (via `openid-client` 6.9.0), sealed login-transaction and session cookies
+(JWE A256GCM, `__Host-`, HttpOnly, Secure, SameSite=Lax), redirect URIs built only from
+`WEB_PUBLIC_ORIGIN`, operator `amr: mfa` + `max_age`, absolute session caps (owner 8 h, operator 1 h),
+POST-only logout with an `Origin` check and RP-initiated end-session, 503 on provider outage,
+HTTPS-only (no plain-http path). All gates exit 0: `test` 331 (web 41), `test:db` 105, e2e 10,
+`pnpm audit --prod` clean.
+
+Tests run against a strict local OIDC provider over real TLS (throwaway certificate per run):
+code flow, PKCE verified by the provider, host-header spoofing, tampered/missing state, forged code,
+provider error, nonce replay, missing login cookie (login CSRF), expired transaction, cross-kind
+transaction, code reuse, cookie purpose confusion and tampering, session expiry and cap, operator
+without MFA, stale operator authentication, ID-token proof header, logout GET/foreign/missing
+origin, end-session redirect, provider outage, plain-http issuer refused.
+
+Mutations caught: operator MFA check removed (1), logout Origin check removed (1), nonce removed
+(6, re-run over TLS). Not tested: a real ZITADEL instance (no account; D-032 conditions), and a
+browser-level login (Playwright) — the handlers are exercised directly with real HTTP.

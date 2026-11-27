@@ -60,6 +60,11 @@ them, the documents in `docs/` win and this file should be corrected.
   `set_config`/`SET` for `app.tenant_id` anywhere else (a test enforces this). Every new table in
   schema `app` needs `ENABLE` + `FORCE ROW LEVEL SECURITY` and, if tenant-owned, a `tenant_id`
   policy with USING and WITH CHECK, or `pnpm test:db` fails.
+- **Web login (M2.6, D-030/D-032/D-033).** Standard OIDC via `openid-client` in
+  `apps/web/src/auth/`; no identity-provider-specific code (ZITADEL specifics are configuration).
+  Login is HTTPS-only (tests use a TLS test provider). Sessions are encrypted host-only cookies;
+  tokens never reach browser JavaScript. Operator API calls send the ID token as
+  `X-Authentication-Proof` so the API can enforce MFA. See `apps/web/.env.example`.
 - `pnpm test:db` and `pnpm test:e2e` need a **throwaway, loopback** PostgreSQL superuser URL in
   `TEST_DATABASE_ADMIN_URL`; they fail (never skip) without it. e2e also needs
   `E2E_API_DATABASE_URL`, printed by `node apps/api/test/db/provision-cli.ts platform_e2e`.
