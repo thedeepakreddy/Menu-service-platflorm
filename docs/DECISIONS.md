@@ -11,27 +11,33 @@ until the owner approves it.
 
 ## Index
 
-| ID              | Title                                                         | Status                 | Date       |
-| --------------- | ------------------------------------------------------------- | ---------------------- | ---------- |
-| [D-001](#d-001) | Document 05 is the authoritative execution roadmap            | approved               | 2026-11-27 |
-| [D-002](#d-002) | Phase sequencing authority and tracking of discrepancies      | approved               | 2026-11-27 |
-| [D-003](#d-003) | Specification placement and preservation                      | approved               | 2026-11-27 |
-| [P-101](#p-101) | pnpm workspaces + Turborepo                                   | verified               | 2026-11-27 |
-| [P-102](#p-102) | Node.js 24 LTS, pinned                                        | verified               | 2026-11-27 |
-| [P-103](#p-103) | Strict TypeScript from one shared base                        | verified               | 2026-11-27 |
-| [P-104](#p-104) | ESLint flat config + Prettier; dependency-cruiser boundaries  | verified               | 2026-11-27 |
-| [P-105](#p-105) | Vitest (unit/integration) + Playwright (e2e)                  | verified               | 2026-11-27 |
-| [P-106](#p-106) | GitHub Actions CI                                             | verified               | 2026-11-27 |
-| [P-107](#p-107) | Zod-validated environment, fail fast, `.env.example` only     | verified               | 2026-11-27 |
-| [P-108](#p-108) | Initial API error envelope and request id convention          | verified               | 2026-11-27 |
-| [P-109](#p-109) | Create only `contracts` and `config` packages in Phase 1      | verified               | 2026-11-27 |
-| [P-110](#p-110) | `CLAUDE.md` operational guide                                 | verified               | 2026-11-27 |
-| [D-004](#d-004) | TypeScript pinned to 6.0.x (not 7.x)                          | approved               | 2026-11-27 |
-| [D-005](#d-005) | 7-day minimum release age for npm packages                    | approved (provisional) | 2026-11-27 |
-| [D-006](#d-006) | `@playwright/test` pinned exactly to 1.63.0                   | approved               | 2026-11-27 |
-| [D-007](#d-007) | `no-extraneous-class` uses `allowWithDecorator` in `apps/api` | approved (scoped)      | 2026-11-27 |
-| [D-008](#d-008) | `APP_ENV` required by every app and by build/typecheck/test   | approved               | 2026-11-27 |
-| [D-009](#d-009) | Web placeholder is marked `noindex`                           | approved               | 2026-11-27 |
+| ID              | Title                                                                   | Status                                 | Date       |
+| --------------- | ----------------------------------------------------------------------- | -------------------------------------- | ---------- |
+| [D-001](#d-001) | Document 05 is the authoritative execution roadmap                      | approved                               | 2026-11-27 |
+| [D-002](#d-002) | Phase sequencing authority and tracking of discrepancies                | approved                               | 2026-11-27 |
+| [D-003](#d-003) | Specification placement and preservation                                | approved                               | 2026-11-27 |
+| [P-101](#p-101) | pnpm workspaces + Turborepo                                             | verified                               | 2026-11-27 |
+| [P-102](#p-102) | Node.js 24 LTS, pinned                                                  | verified                               | 2026-11-27 |
+| [P-103](#p-103) | Strict TypeScript from one shared base                                  | verified                               | 2026-11-27 |
+| [P-104](#p-104) | ESLint flat config + Prettier; dependency-cruiser boundaries            | verified                               | 2026-11-27 |
+| [P-105](#p-105) | Vitest (unit/integration) + Playwright (e2e)                            | verified                               | 2026-11-27 |
+| [P-106](#p-106) | GitHub Actions CI                                                       | verified                               | 2026-11-27 |
+| [P-107](#p-107) | Zod-validated environment, fail fast, `.env.example` only               | verified                               | 2026-11-27 |
+| [P-108](#p-108) | Initial API error envelope and request id convention                    | verified                               | 2026-11-27 |
+| [P-109](#p-109) | Create only `contracts` and `config` packages in Phase 1                | verified                               | 2026-11-27 |
+| [P-110](#p-110) | `CLAUDE.md` operational guide                                           | verified                               | 2026-11-27 |
+| [D-004](#d-004) | TypeScript pinned to 6.0.x (not 7.x)                                    | approved                               | 2026-11-27 |
+| [D-005](#d-005) | 7-day minimum release age for npm packages                              | approved (provisional)                 | 2026-11-27 |
+| [D-006](#d-006) | `@playwright/test` pinned exactly to 1.63.0                             | approved                               | 2026-11-27 |
+| [D-007](#d-007) | `no-extraneous-class` uses `allowWithDecorator` in `apps/api`           | approved (scoped)                      | 2026-11-27 |
+| [D-008](#d-008) | `APP_ENV` required by every app and by build/typecheck/test             | approved                               | 2026-11-27 |
+| [D-009](#d-009) | Web placeholder is marked `noindex`                                     | approved                               | 2026-11-27 |
+| [D-010](#d-010) | Boundary graph: build output followed-not-excluded; anchored exclusions | implemented — awaiting owner review    | 2026-11-27 |
+| [D-011](#d-011) | `packages/contracts` dependency allowlist (zod only, incl. type-only)   | implemented — type-only scope proposed | 2026-11-27 |
+| [D-012](#d-012) | Web app must not import database clients or ORMs                        | implemented — awaiting owner review    | 2026-11-27 |
+| [D-013](#d-013) | `engineStrict: true` enforces the Node.js engine range                  | implemented — awaiting owner review    | 2026-11-27 |
+| [D-014](#d-014) | `packageManager` pinned with a Corepack integrity hash                  | implemented — awaiting owner review    | 2026-11-27 |
+| [D-015](#d-015) | Automated supply-chain policy test                                      | implemented — awaiting owner review    | 2026-11-27 |
 
 ---
 
@@ -121,6 +127,10 @@ _Alternatives:_ npm workspaces (no task graph or caching), Nx (heavier, more loc
 Local verification used Node 24.22.3, installed from nodejs.org with its SHA-256 checked against
 the official `SHASUMS256.txt`. The container's preinstalled Node 22 was not used.
 
+_Correction (2026-11-27, audit finding L-01):_ `engines` alone was **not** enforced. pnpm only
+warned, and a frozen install on Node 22 succeeded. It is enforced from the Phase 1 remediation
+onwards by `engineStrict: true` ([D-013](#d-013)).
+
 ### P-103
 
 **Strict TypeScript.** The single base is `packages/config/tsconfig/base.json` (`strict`,
@@ -138,6 +148,14 @@ Oxc transformer resolves `extends` through the workspace symlink, which breaks r
 (`tests/architecture/dependency-cruiser.config.cjs`) through both `pnpm arch` (CLI) and a Vitest
 suite that also proves each rule rejects a deliberate violation. See D-007 for the one rule option
 that was changed.
+
+_Correction (2026-11-27, audit findings H-01, M-01–M-03, L-03):_ as originally accepted, the
+boundary configuration's unanchored `dist/` exclusion silently dropped every dependency on an npm
+package whose code lives under `dist/` (12 of 71 edges, including `next` and `vitest`). As a
+result `no-dev-deps-in-production-code` could never fire, and the framework rule for contracts was
+blind to such packages. Only 7 of the 9 rules had negative fixtures, and the untested ones
+included the broken rule. The Phase 1 remediation repairs this ([D-010](#d-010)–[D-012](#d-012));
+see `docs/STATUS.md` → "Phase 1 audit remediation".
 
 ### P-105
 
@@ -241,8 +259,10 @@ approving picks through pnpm's interactive prompt (which leaves no reviewable re
 3. Remove the exclusion once the version is older than 7 days, or at the next dependency update,
    whichever comes first. Record the removal in the log.
 4. Reviewers check that every `minimumReleaseAgeExclude` entry has an open log row and that no row
-   is older than its removal condition. This check is manual today. Automating it in CI is a
-   possible future change, tracked in [G-30](GAPS.md), and is not authorized yet.
+   is older than its removal condition. Since the Phase 1 remediation, CI checks automatically that
+   every exclusion is an exact `name@version` with an `OV-###` row in the log below, and that the
+   release age is not lowered ([D-015](#d-015)). Checking that rows are closed when their removal
+   condition is met remains a manual review step.
 
 **D-005 override log**
 
@@ -308,3 +328,99 @@ documented in `CLAUDE.md` and `README.md`).
 **Decision.** The root layout sets `robots: { index: false, follow: false }`.
 **Rationale.** Keeps the Phase 1 placeholder out of search indexes if it is ever deployed. Real SEO
 and robots policy belong to the customer platform phases (Doc 03 §18). Remove or replace this then.
+
+---
+
+## Phase 1 audit remediation decisions (D-010 – D-015)
+
+**Authorization evidence:** Owner message "Phase 1 Remediation — Independent Audit Findings"
+(2026-11-27). It authorized fixes for H-01, M-01, M-02 and M-03, related architecture tests and
+fixtures, L-01, L-03 and L-07, and L-06 and L-10 if narrow. Each decision below implements that
+authorization and stays **awaiting owner review** until the owner accepts the remediation. No
+Phase 2 work is included.
+
+## D-010
+
+**Title:** Boundary graph: workspace build output is followed-not-excluded; all exclusions anchored
+**Status:** implemented — awaiting owner review
+**Decision.** In `tests/architecture/dependency-cruiser.config.cjs`, `node_modules` and workspace
+build output (`^(apps|packages)/[^/]+/(dist|\.next)/`) are `doNotFollow`. They remain in the graph
+as dependency targets, but they are not traversed. `exclude` is limited to anchored workspace
+locations: the fixtures, `.turbo`, coverage and test reports, and the generated
+`apps/<app>/next-env.d.ts`. A new rule, `no-workspace-build-output-imports`, rejects any source
+import of a workspace build-output directory by path (`local` dependency type: value, type-only and
+dynamic imports). A workspace package consumed by name through its `exports` map is not `local` and
+stays allowed. A new rule, `api-module-entry-only`, extends module encapsulation to every
+`apps/api` file outside `src/modules/`.
+**Rationale.** Audit findings H-01 (unanchored exclusion swallowed npm `dist/` paths), M-01 (build
+output not policed) and M-02 (root and bootstrap files could bypass a module's `index.ts`).
+**Verification.** `tests/architecture/boundaries.test.ts`: per-rule fixtures, a valid fixture, and
+graph-integrity tests comparing the configured graph against an unexcluded baseline. Restoring
+the original exclusion makes 7 tests fail.
+
+## D-011
+
+**Title:** `packages/contracts` dependency allowlist
+**Status:** implemented — **type-only scope proposed for owner confirmation**
+**Decision.** Rule `contracts-allowlist` replaces `contracts-must-be-framework-free`. Runtime
+sources under `packages/contracts/src/` (test files excepted) may depend only on other
+`packages/contracts/src/` files and `zod`. Everything else is rejected, including Node built-ins
+(`node:*`), frameworks, ORM/database clients, HTTP clients and any other package.
+**Type-only imports.** The implementation holds type-only imports to the **same** allowlist. For
+example, `import type { Request } from 'express'` is rejected. Contracts are shared with browser
+code and are meant to stay framework-free, and a framework type in a contract couples every
+consumer to that framework. The owner asked that this be assessed carefully, so this choice is
+recorded as **proposed**. The alternative, allowing type-only imports of approved packages, would
+need an explicit list.
+**Limits.** Test files (`*.test.ts`) are exempt. They are excluded from the build by
+`tsconfig.build.json`.
+
+## D-012
+
+**Title:** Web app must not import database clients or ORMs
+**Status:** implemented — awaiting owner review
+**Decision.** Rule `web-no-db-clients` rejects any import from `apps/web/` (value, type-only or
+dynamic, resolved or not) of a known database client or ORM. The list is: Prisma, MikroORM,
+Drizzle, Kysely, Knex, TypeORM, Sequelize, pg/pg-pool/postgres, Neon, Vercel Postgres,
+mysql/mysql2/mariadb, PlanetScale, better-sqlite3/sqlite3, libSQL, MongoDB/Mongoose and
+Redis/ioredis.
+**Limits.** This is necessarily a denylist, because the web app legitimately uses many packages.
+A database client not on the list is not caught. When Phase 2 introduces database infrastructure,
+including any workspace database package, the rule must be extended in the same change
+([G-40](GAPS.md)).
+
+## D-013
+
+**Title:** `engineStrict: true`
+**Status:** implemented — awaiting owner review
+**Decision.** `engineStrict: true` in `pnpm-workspace.yaml`, so pnpm refuses to install when
+Node.js does not satisfy the root `engines.node` (`>=24.22.3 <25`).
+**Verification.** A frozen install on Node 22.23.5 now fails with `ERR_PNPM_UNSUPPORTED_ENGINE`,
+and on Node 24.22.3 it succeeds (audit finding L-01).
+
+## D-014
+
+**Title:** `packageManager` pinned with a Corepack integrity hash
+**Status:** implemented — awaiting owner review
+**Decision.** `"packageManager": "pnpm@12.22.0+sha512.<hex>"`, generated with `corepack use`.
+**Verification.** The hash equals the npm registry `dist.integrity` of `pnpm@12.22.0` (base64 →
+hex comparison). With a fresh Corepack cache, the correct hash runs pnpm 12.22.0, and a tampered
+hash fails with "Mismatch hashes". The frozen install and lockfile are unchanged (audit finding
+L-06).
+
+## D-015
+
+**Title:** Automated supply-chain policy test
+**Status:** implemented — awaiting owner review
+**Decision.** `tests/policy/supply-chain-policy.test.ts`, which runs in `pnpm test` and CI,
+checks pnpm's **effective** settings (`pnpm config get … --json`) and the root `package.json`.
+It requires: `minimumReleaseAge >= 10080`; `engineStrict` true; `engines.node` declared;
+`packageManager` hash-pinned; and every `minimumReleaseAgeExclude` entry an exact `name@version`
+with an `OV-###` row in the D-005 override log. Nine negative cases are unit-tested. Lowering the
+real release age makes the repository test fail.
+**Correction to audit finding L-10.** The audit stated that CI does not re-check the release age
+because it installs with `--frozen-lockfile`. **That claim was wrong.** Verified on 2026-11-27 with
+pnpm 12.22.0: a lockfile created with the policy disabled, and then installed with
+`--frozen-lockfile` with the policy enabled, fails with `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`.
+pnpm verifies the lockfile against the active policy itself. D-015 therefore protects the inputs
+that pnpm check depends on (the settings and the exclusions), rather than duplicating it.

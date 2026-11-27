@@ -1,0 +1,11 @@
+{
+  "name": "fixture-contracts",
+  "version": "0.0.0-fixture",
+  "private": true,
+  "dependencies": {
+    "axios": "0.0.0-fixture",
+    "express": "0.0.0-fixture",
+    "@prisma/client": "0.0.0-fixture",
+    "left-pad": "0.0.0-fixture"
+  }
+}

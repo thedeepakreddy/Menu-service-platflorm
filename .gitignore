@@ -11,5 +11,8 @@ playwright-report/
 .env.*
 !.env.example
 .DS_Store
-# Fixture package used to prove the contracts framework-free rule.
-!tests/architecture/fixtures/violations/packages/contracts/node_modules/
+# Architecture regression fixtures: hand-written fake node_modules/, dist/ and
+# .next/ folders are committed on purpose (tests/architecture/fixtures/README.md).
+!tests/architecture/fixtures/**/node_modules/
+!tests/architecture/fixtures/**/dist/
+!tests/architecture/fixtures/**/.next/

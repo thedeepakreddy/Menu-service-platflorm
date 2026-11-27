@@ -20,6 +20,13 @@ These points are taken directly from Document 02. They are baseline statements, 
 - Modules own their rules, data-access boundary and contracts. Dependency direction is enforced in CI. Shared libraries hold only deliberately reusable primitives (§3).
 - A _proposed_ monorepo structure: `apps/{web,api}`, `packages/{contracts,ui,config,test-utils}`, `services/{ai,performance}`, `infra/{docker,environments,iac}`, `docs/{architecture,decisions,security,runbooks}`, `scripts/`, `tests/{architecture,security,e2e}`. Document 02 states the names and tooling "can be adjusted through recorded technical decisions" (§4).
 
+## Enforced boundary rules
+
+The architecture rules that Phase 1 enforces in CI are listed in `CLAUDE.md` ("Boundary rules")
+and defined in `tests/architecture/dependency-cruiser.config.cjs`. Each has a per-rule regression
+fixture under `tests/architecture/fixtures/rules/`. The rule set was corrected and extended by the
+Phase 1 audit remediation (D-010 – D-012; findings H-01, M-01 – M-03).
+
 ## Conventions for future architecture records
 
 Architecture decisions are logged centrally in [`../DECISIONS.md`](../DECISIONS.md). Longer

@@ -1,0 +1,8 @@
+{
+  "name": "fixture-api",
+  "version": "0.0.0-fixture",
+  "private": true,
+  "devDependencies": {
+    "devlib": "0.0.0-fixture"
+  }
+}

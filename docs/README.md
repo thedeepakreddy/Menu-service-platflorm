@@ -53,13 +53,13 @@ Verify with: `cd docs/specifications && sha256sum *.pdf`
 
 ## 3. Working documents
 
-| File                             | Purpose                                                                    |
-| -------------------------------- | -------------------------------------------------------------------------- |
-| [`DECISIONS.md`](DECISIONS.md)   | Central decision log (proposed / approved / superseded …)                  |
-| [`STATUS.md`](STATUS.md)         | Phase status ledger and implementation ledger                              |
-| [`GAPS.md`](GAPS.md)             | Unresolved specification gaps, conflicts and open questions                |
-| [`architecture/`](architecture/) | Architecture notes, phase mapping and future architecture decision records |
-| [`audit/`](audit/)               | Independent review packets (Phase 1 audit pending)                         |
+| File                             | Purpose                                                                             |
+| -------------------------------- | ----------------------------------------------------------------------------------- |
+| [`DECISIONS.md`](DECISIONS.md)   | Central decision log (proposed / approved / superseded …)                           |
+| [`STATUS.md`](STATUS.md)         | Phase status ledger and implementation ledger                                       |
+| [`GAPS.md`](GAPS.md)             | Unresolved specification gaps, conflicts and open questions                         |
+| [`architecture/`](architecture/) | Architecture notes, phase mapping and future architecture decision records          |
+| [`audit/`](audit/)               | Phase 1 review packet and the audit findings register (`phase-1-audit-findings.md`) |
 
 ## 4. Status vocabulary
 

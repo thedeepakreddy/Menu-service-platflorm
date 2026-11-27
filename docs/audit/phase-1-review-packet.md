@@ -5,7 +5,14 @@ implementation without relying on the implementing agent's chat history or summa
 implementing agent prepared this packet. Treat every claim in it as something to verify, not as
 evidence.
 
-**Status:** audit pending · prepared 2026-11-27
+**Status:** audit completed 2026-11-27 (PASS WITH CONDITIONS) · prepared 2026-11-27
+
+> **Post-audit correction.** Several statements below were shown to be inaccurate by the audit.
+> Row 4 of §5 understated the boundary-check blind spot: the `dist/` exclusion also dropped npm
+> dependencies (H-01). The claimed fixture coverage was 7 of 9 rules, not all rules (L-03). And
+> `engines` was not enforced (L-01). See [`phase-1-audit-findings.md`](phase-1-audit-findings.md)
+> for every finding and its status. This packet is kept as the record of what was handed to the
+> auditor.
 
 ## 1. What to review
 

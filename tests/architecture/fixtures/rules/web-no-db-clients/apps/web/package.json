@@ -1,0 +1,10 @@
+{
+  "name": "fixture-web",
+  "version": "0.0.0-fixture",
+  "private": true,
+  "dependencies": {
+    "pg": "0.0.0-fixture",
+    "@prisma/client": "0.0.0-fixture",
+    "ioredis": "0.0.0-fixture"
+  }
+}

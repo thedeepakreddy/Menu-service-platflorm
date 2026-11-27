@@ -5,6 +5,12 @@
     "noEmit": true,
     "lib": ["ES2023", "DOM"]
   },
-  "include": ["architecture/**/*.ts", "e2e/**/*.ts", "startup/**/*.ts", "vitest.config.ts"],
+  "include": [
+    "architecture/**/*.ts",
+    "e2e/**/*.ts",
+    "startup/**/*.ts",
+    "policy/**/*.ts",
+    "vitest.config.ts"
+  ],
   "exclude": ["architecture/fixtures/**"]
 }

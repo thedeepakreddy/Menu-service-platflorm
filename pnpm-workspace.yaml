@@ -3,6 +3,11 @@ packages:
   - packages/*
   - tests
 
-# Supply-chain guard (P-101): refuse package versions published less than
-# 7 days ago (value in minutes).
+# Supply-chain guard (D-005, approved provisionally): refuse package versions
+# published less than 7 days ago (value in minutes). Overrides follow the D-005
+# procedure in docs/DECISIONS.md and are checked by tests/policy/supply-chain-policy.test.ts.
 minimumReleaseAge: 10080
+
+# Fail (rather than warn) when the Node.js version does not satisfy the root
+# package.json `engines` field (audit finding L-01, decision D-013).
+engineStrict: true

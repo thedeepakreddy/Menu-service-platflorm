@@ -38,9 +38,12 @@ them, the documents in `docs/` win and this file should be corrected.
 
 ## Toolchain
 
-- Node.js **24** (exact version in `.nvmrc`; `engines` enforces `>=24.22.3 <25`). pnpm is pinned via
-  `packageManager` and activated with `corepack enable`.
-- New package versions must be at least 7 days old (`minimumReleaseAge` in `pnpm-workspace.yaml`).
+- Node.js **24** (exact version in `.nvmrc`; `engines` `>=24.22.3 <25`, enforced by `engineStrict: true`
+  in `pnpm-workspace.yaml`). pnpm is pinned with an integrity hash in `packageManager` and activated
+  with `corepack enable`.
+- New package versions must be at least 7 days old (`minimumReleaseAge` in `pnpm-workspace.yaml`,
+  D-005). pnpm also re-checks the lockfile against it on `--frozen-lockfile` installs.
+  `tests/policy/` fails if these settings are weakened or an exclusion lacks a D-005 override-log row.
 - `APP_ENV` (`development | test | staging | production`) is required by both apps and by any
   command that loads the Next.js config (build, typecheck, tests). Export it in your shell.
 
@@ -69,19 +72,33 @@ CI (`.github/workflows/ci.yml`) runs all of the above in that order.
 | `packages/config`    | Shared TypeScript and ESLint presets                                             |
 | `tests/architecture` | Boundary rules and tests, including deliberate-violation fixtures                |
 | `tests/startup`      | Proves the built apps refuse invalid configuration                               |
+| `tests/policy`       | Supply-chain policy checks (release age, engine-strict, pinned pnpm, exclusions) |
 | `tests/e2e`          | Playwright smoke tests                                                           |
 | `docs/`              | Specifications, decisions, status, gaps                                          |
 
 ## Boundary rules (enforced by `pnpm arch` and `pnpm test`)
 
-- Apps never import each other; share code through `packages/`.
-- Packages never import apps. Apps consume packages via their public entry only.
-- `packages/contracts` must not depend on React, Next.js, Express or NestJS.
-- An API module may use another module only through that module's `index.ts`.
-- No circular imports, no unresolvable imports, no devDependencies in runtime code.
+Twelve rules, each with a permanent per-rule regression fixture:
 
-Rules live in `tests/architecture/dependency-cruiser.config.cjs`. Fixtures in
-`tests/architecture/fixtures/violations/` break the rules on purpose. Do not "fix" them.
+- No circular imports; every import must resolve.
+- Apps never import each other; share code through `packages/`. Packages never import apps.
+- Apps consume packages through their public entry only: never `packages/*/src/`, and no source
+  file imports any workspace build output (`dist/`, `.next/`) by path.
+- Runtime code never imports `tests/`, and never imports devDependencies (type-only imports are
+  allowed).
+- `packages/contracts` runtime code may import only its own sources and `zod`: no Node built-ins,
+  frameworks, DB clients, HTTP clients or other packages, including type-only imports (D-011).
+- `apps/web` must not import database clients or ORMs (a denylist; extend it when adding DB
+  infrastructure, D-012).
+- An API module may use another module only through its `index.ts`, and so must every other
+  `apps/api` file (root, bootstrap, tests, config).
+
+Rules live in `tests/architecture/dependency-cruiser.config.cjs`. Build output and `node_modules`
+are `doNotFollow` (kept in the graph, not traversed). Exclusions must stay anchored to workspace
+paths, and the graph-integrity tests fail if an exclusion ever drops a dependency edge (audit H-01).
+Fixtures live in `tests/architecture/fixtures/`: `rules/<rule-name>/` breaks exactly that rule, and
+`valid/` must pass. Do not "fix" them. Adding a rule requires adding its fixture directory and
+expectations, or the suite fails.
 
 ## Conventions
 
