@@ -7,10 +7,13 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, inject, it } from 'vitest';
 
 const apiRoot = fileURLToPath(new URL('../', import.meta.url));
-const { ownerUrl, runtimeUrl } = inject('database');
+const { ownerUrl, runtimeUrl, operatorUrl } = inject('database');
 
 /** Starts the built API; resolves with its exit code, or 'listening' once /health answers. */
-function startApi(databaseUrl: string): Promise<number | 'listening'> {
+function startApi(
+  databaseUrl: string,
+  operatorDatabaseUrl?: string,
+): Promise<number | 'listening'> {
   return new Promise((resolve) => {
     const port = String(20_000 + Math.floor(Math.random() * 20_000));
     const child = spawn(process.execPath, ['dist/main.js'], {
@@ -21,6 +24,9 @@ function startApi(databaseUrl: string): Promise<number | 'listening'> {
         API_HOST: '127.0.0.1',
         API_PORT: port,
         API_DATABASE_URL: databaseUrl,
+        ...(operatorDatabaseUrl === undefined
+          ? {}
+          : { API_OPERATOR_DATABASE_URL: operatorDatabaseUrl }),
         API_LOG_LEVEL: 'error',
       },
       stdio: ['ignore', 'ignore', 'pipe'],
@@ -57,5 +63,14 @@ describe('API startup database role check (D-028)', () => {
 
   it('starts with the restricted runtime role', async () => {
     expect(await startApi(runtimeUrl)).toBe('listening');
+  });
+
+  it('refuses to start when the operator connection uses the table-owning role (M2.4)', async () => {
+    expect(await startApi(runtimeUrl, ownerUrl)).toBe(1);
+    expect(lastStderr).toContain('owns application tables');
+  });
+
+  it('starts with the runtime and operator roles', async () => {
+    expect(await startApi(runtimeUrl, operatorUrl)).toBe('listening');
   });
 });

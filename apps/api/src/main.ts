@@ -26,12 +26,20 @@ async function main(): Promise<void> {
     connectionString: parsed.env.API_DATABASE_URL,
     maxConnections: parsed.env.API_DATABASE_POOL_MAX,
   });
+  const operatorDb =
+    parsed.env.API_OPERATOR_DATABASE_URL === undefined
+      ? undefined
+      : createDatabase({
+          connectionString: parsed.env.API_OPERATOR_DATABASE_URL,
+          maxConnections: 2,
+        });
   try {
     await assertSafeRuntimeRole(db);
+    if (operatorDb !== undefined) await assertSafeRuntimeRole(operatorDb);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'unknown error';
     process.stderr.write(`Database check failed; refusing to start: ${redactString(message)}\n`);
-    await db.destroy();
+    await Promise.all([db.destroy(), operatorDb?.destroy()]);
     process.exitCode = 1;
     return;
   }
@@ -64,6 +72,7 @@ async function main(): Promise<void> {
     corsAllowedOrigins: API_CORS_ALLOWED_ORIGINS,
     hsts: PRODUCTION_LIKE.has(APP_ENV),
     database: db,
+    operatorDatabase: operatorDb,
   });
   await app.listen(API_PORT, API_HOST);
 }

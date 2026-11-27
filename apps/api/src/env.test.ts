@@ -4,6 +4,8 @@ import { parseApiEnv } from './env.js';
 
 // Synthetic connection string; sslmode=require so production-like cases are valid too.
 const DB_URL = 'postgres://app_runtime:synthetic@db.internal:5432/platform?sslmode=require';
+const OPERATOR_DB_URL =
+  'postgres://app_operator:synthetic@db.internal:5432/platform?sslmode=require';
 // Synthetic OIDC trust domains (required in staging/production, D-025).
 const OIDC = {
   API_OWNER_OIDC_ISSUER: 'https://owners.idp.example',
@@ -18,6 +20,7 @@ const valid = {
   API_HOST: '127.0.0.1',
   API_PORT: '4000',
   API_DATABASE_URL: DB_URL,
+  API_OPERATOR_DATABASE_URL: OPERATOR_DB_URL,
   ...OIDC,
 };
 
@@ -34,6 +37,7 @@ describe('parseApiEnv', () => {
         API_LOG_LEVEL: 'info',
         API_DATABASE_URL: DB_URL,
         API_DATABASE_POOL_MAX: 10,
+        API_OPERATOR_DATABASE_URL: OPERATOR_DB_URL,
         ...OIDC,
       },
     });
@@ -219,5 +223,22 @@ describe('identity trust domains (D-025)', () => {
       API_OPERATOR_OIDC_AUDIENCE: OIDC.API_OWNER_OIDC_AUDIENCE,
     };
     expect(parseApiEnv(merged).ok).toBe(false);
+  });
+});
+
+describe('operator database configuration (D-028)', () => {
+  it.each(['staging', 'production'])('is required, over TLS, in %s', (appEnv) => {
+    expect(
+      parseApiEnv({ ...valid, APP_ENV: appEnv, API_OPERATOR_DATABASE_URL: undefined }).ok,
+    ).toBe(false);
+    const plain = 'postgres://app_operator:synthetic@db.internal:5432/platform';
+    expect(parseApiEnv({ ...valid, APP_ENV: appEnv, API_OPERATOR_DATABASE_URL: plain }).ok).toBe(
+      false,
+    );
+    expect(parseApiEnv({ ...valid, APP_ENV: appEnv }).ok).toBe(true);
+  });
+
+  it('is optional in development and test', () => {
+    expect(parseApiEnv({ ...valid, API_OPERATOR_DATABASE_URL: undefined }).ok).toBe(true);
   });
 });

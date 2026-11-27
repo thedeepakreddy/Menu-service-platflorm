@@ -541,7 +541,7 @@ conditional on this gate; it starts with the G-03 – G-08 entry decisions.
 | M2.1 Database foundation and isolation   | done; CI verified          | `eaee6e6`, CI #13 (`45952082792`) success: Kysely/pg, migrations, RLS + FORCE, `withTenant()`, startup role check, `pnpm test:db` in CI                                                                                                                                                     |
 | M2.2 Tenant resolution and context       | done; CI verified          | `53b79c9`, CI #14 (`45952364343`) success: slug contract, `app.resolve_active_tenant`, `GET /public/tenants/:slug`; 13 real-PostgreSQL tests                                                                                                                                                |
 | M2.3 Identity and authorization boundary | done; CI verified          | `e5933cc`, CI #15 (`45952916611`) success: jose verifier (RS256/ES256 only, iss/aud/exp/nbf/iat), separate owner/operator trust domains, operator MFA, `app.find_account` (no auto-creation), owner access only via an active membership read under RLS; 15 real-PostgreSQL + 11 unit tests |
-| M2.4 Provisioning and lifecycle          | not started                | —                                                                                                                                                                                                                                                                                           |
+| M2.4 Provisioning and lifecycle          | done (local); CI pending   | see "M2.4 verification": operator-only audited SECURITY DEFINER provisioning and compare-and-set lifecycle; separate operator credential; 32 real-PostgreSQL tests                                                                                                                          |
 | M2.5 Abuse controls                      | not started                | —                                                                                                                                                                                                                                                                                           |
 | M2.6 Web BFF session                     | **blocked** — D-025 vendor | owner decision required                                                                                                                                                                                                                                                                     |
 
@@ -572,3 +572,19 @@ clean (jose 6.2.18, MIT). Mutations caught: guard accepting any verified token w
 revoked membership reachable); operator MFA requirement removed (1 test). Identity-provider
 **vendor still undecided** (D-025): verification uses local test issuers with real ES256/RS256
 signatures.
+
+### M2.4 verification (local)
+
+All gates exit 0: `test` 286 passed, `test:db` **91 passed**, e2e 10 passed. Covered: atomic
+provisioning (tenant + owner account + membership + audit), account reuse, taken slug (409, no
+audit), owner identity bound to an operator (409, nothing created), 6 invalid bodies (400 before
+the database), 4 unauthorized callers (401, nothing changed), suspend → public and owner 404,
+reactivate → restored, stale expected status (409), 4 invalid transitions (422), retirement
+terminal, unknown tenant (404), **10 concurrent suspensions: exactly one 200, nine 409, one audit
+row**, attempt/outcome log lines outside the transaction, 503 without the operator credential,
+role separation (runtime cannot execute operator functions; operator cannot touch tables), built
+API refuses an owner-role operator connection.
+
+Mutations caught: no compare-and-set (3 tests), operator function granted to the runtime role
+(1), no audit insert on status change (3), no attempt log (1; a first attempt at this mutation
+did not apply because the code had been reformatted, and was redone).

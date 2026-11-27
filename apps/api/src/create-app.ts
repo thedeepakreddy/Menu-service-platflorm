@@ -11,6 +11,7 @@ import type { Db } from './infrastructure/database/database.js';
 import { DatabaseModule } from './infrastructure/database/database.module.js';
 import { IdentityModule } from './modules/identity/index.js';
 import type { IdentityConfig } from './modules/identity/index.js';
+import { OperatorTenantsModule } from './modules/operator-tenants/index.js';
 import { TenancyModule } from './modules/tenancy/index.js';
 import { JsonLogger } from './logging/json-logger.js';
 import { requestLoggingMiddleware } from './logging/request-logging.js';
@@ -31,6 +32,8 @@ export type CreateAppOptions = {
   database?: Db;
   /** Owner and operator token verifiers (D-025). A missing one fails its routes closed. */
   identity?: IdentityConfig;
+  /** The operator-role database (D-028). Absent: operator actions fail closed (503). */
+  operatorDatabase?: Db;
 };
 
 export async function createApp(options: CreateAppOptions = {}): Promise<INestApplication> {
@@ -42,7 +45,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<INestAp
   const entry =
     options.database === undefined
       ? root
-      : rootWithDatabase(root, options.database, options.identity ?? {});
+      : rootWithDatabase(root, options.database, options.identity ?? {}, options.operatorDatabase);
   const app = await NestFactory.create<NestExpressApplication>(entry);
   if (logger !== false) app.useLogger(logger);
   app.disable('x-powered-by');
@@ -57,9 +60,20 @@ export async function createApp(options: CreateAppOptions = {}): Promise<INestAp
 }
 
 /** Modules that need the database; mounted only when one is supplied. */
-function rootWithDatabase(root: Type, db: Db, identity: IdentityConfig): Type {
+function rootWithDatabase(
+  root: Type,
+  db: Db,
+  identity: IdentityConfig,
+  operatorDb: Db | undefined,
+): Type {
   @Module({
-    imports: [DatabaseModule.forRoot(db), IdentityModule.forRoot(identity), root, TenancyModule],
+    imports: [
+      DatabaseModule.forRoot(db, operatorDb),
+      IdentityModule.forRoot(identity),
+      root,
+      TenancyModule,
+      OperatorTenantsModule,
+    ],
   })
   class RootWithDatabase {}
   return RootWithDatabase;

@@ -57,3 +57,49 @@ export const ownerTenantSchema = z
   .strict();
 
 export type OwnerTenant = z.infer<typeof ownerTenantSchema>;
+
+/** Tenant lifecycle states (D-027): active <-> suspended; either -> retired (terminal). */
+export const tenantStatusSchema = z.enum(['active', 'suspended', 'retired']);
+export type TenantStatus = z.infer<typeof tenantStatusSchema>;
+
+/** Why an operator acts; recorded in the operator audit (10–500 characters, D-028). */
+export const operatorReasonSchema = z.string().trim().min(10).max(500);
+
+/** Owner identity at the identity provider: issuer URL + subject (D-025). */
+const ownerIdentitySchema = z
+  .object({
+    issuer: z.url({ protocol: /^https?$/ }).max(500),
+    subject: z.string().min(1).max(500),
+  })
+  .strict();
+
+/** `POST /operator/tenants`: provision a tenant with its first owner (onboarding foundation). */
+export const provisionTenantRequestSchema = z
+  .object({
+    slug: tenantSlugSchema,
+    displayName: z.string().trim().min(1).max(200),
+    owner: ownerIdentitySchema,
+    reason: operatorReasonSchema,
+  })
+  .strict();
+export type ProvisionTenantRequest = z.infer<typeof provisionTenantRequestSchema>;
+
+/** `POST /operator/tenants/:slug/status`: compare-and-set lifecycle change. */
+export const tenantStatusChangeRequestSchema = z
+  .object({
+    expectedStatus: tenantStatusSchema,
+    status: tenantStatusSchema,
+    reason: operatorReasonSchema,
+  })
+  .strict();
+export type TenantStatusChangeRequest = z.infer<typeof tenantStatusChangeRequestSchema>;
+
+/** Operator view of a tenant (no internal id). */
+export const operatorTenantSchema = z
+  .object({
+    slug: tenantSlugSchema,
+    displayName: z.string().min(1).max(200),
+    status: tenantStatusSchema,
+  })
+  .strict();
+export type OperatorTenant = z.infer<typeof operatorTenantSchema>;

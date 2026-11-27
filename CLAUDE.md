@@ -53,7 +53,9 @@ them, the documents in `docs/` win and this file should be corrected.
 - **Database (Phase 2, D-024 – D-029).** The API requires `API_DATABASE_URL` (the restricted
   `app_runtime` role; a secret) and refuses to start as a superuser, a BYPASSRLS role or a table
   owner. Migrations are plain SQL in `apps/api/migrations/`, applied as `app_owner` with
-  `MIGRATION_DATABASE_URL` by `pnpm --filter @platform/api migrate`. Tenant-scoped queries go
+  `MIGRATION_DATABASE_URL` by `pnpm --filter @platform/api migrate`. Operator actions use a separate
+  credential, `API_OPERATOR_DATABASE_URL` (role `app_operator`, which may only execute the audited
+  `SECURITY DEFINER` operator functions). Tenant-scoped queries go
   only through `withTenant()` (`apps/api/src/infrastructure/database/database.ts`); never call
   `set_config`/`SET` for `app.tenant_id` anywhere else (a test enforces this). Every new table in
   schema `app` needs `ENABLE` + `FORCE ROW LEVEL SECURITY` and, if tenant-owned, a `tenant_id`

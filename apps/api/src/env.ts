@@ -80,6 +80,11 @@ export const apiEnvSchema = z
     API_LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
     /** Required. The restricted runtime role's connection string (D-028, D-029). Secret. */
     API_DATABASE_URL: postgresUrl,
+    /**
+     * The operator role's connection string (D-028). Secret. Optional in development and test
+     * (operator actions then fail closed with 503); required in staging and production.
+     */
+    API_OPERATOR_DATABASE_URL: postgresUrl.optional(),
     /** Optional. Maximum pooled database connections; defaults to 10. */
     API_DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
     /**
@@ -137,6 +142,21 @@ export const apiEnvSchema = z
         code: 'custom',
         path: ['API_CORS_ALLOWED_ORIGINS'],
         message: 'must use https:// origins in staging and production',
+      });
+    }
+    if (env.API_OPERATOR_DATABASE_URL === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['API_OPERATOR_DATABASE_URL'],
+        message: 'is required in staging and production',
+      });
+    } else if (
+      !TLS_SSLMODES.has(new URL(env.API_OPERATOR_DATABASE_URL).searchParams.get('sslmode') ?? '')
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['API_OPERATOR_DATABASE_URL'],
+        message: 'must require TLS in staging and production',
       });
     }
     const sslmode = new URL(env.API_DATABASE_URL).searchParams.get('sslmode') ?? '';
