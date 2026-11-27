@@ -46,3 +46,14 @@ export const publicTenantSchema = z
   .strict();
 
 export type PublicTenant = z.infer<typeof publicTenantSchema>;
+
+/** Response of `GET /owner/tenants/:slug`: the caller's own tenant and role (Phase 2: owner). */
+export const ownerTenantSchema = z
+  .object({
+    slug: tenantSlugSchema,
+    displayName: z.string().min(1).max(200),
+    role: z.literal('owner'),
+  })
+  .strict();
+
+export type OwnerTenant = z.infer<typeof ownerTenantSchema>;

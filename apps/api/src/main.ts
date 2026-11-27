@@ -1,8 +1,12 @@
+import { createRemoteJWKSet } from 'jose';
+
 import { createApp } from './create-app.js';
 import { parseApiEnv, PRODUCTION_LIKE } from './env.js';
 import { assertSafeRuntimeRole, createDatabase } from './infrastructure/database/database.js';
 import { JsonLogger } from './logging/json-logger.js';
 import { redactString } from './logging/redact.js';
+import { createIdentityVerifier } from './modules/identity/index.js';
+import type { IdentityConfig } from './modules/identity/index.js';
 
 async function main(): Promise<void> {
   const parsed = parseApiEnv(process.env);
@@ -32,8 +36,31 @@ async function main(): Promise<void> {
     return;
   }
 
+  const env = parsed.env;
+  const identity: IdentityConfig = {};
+  if (env.API_OWNER_OIDC_ISSUER && env.API_OWNER_OIDC_AUDIENCE && env.API_OWNER_OIDC_JWKS_URL) {
+    identity.owner = createIdentityVerifier({
+      issuer: env.API_OWNER_OIDC_ISSUER,
+      audience: env.API_OWNER_OIDC_AUDIENCE,
+      keys: createRemoteJWKSet(new URL(env.API_OWNER_OIDC_JWKS_URL)),
+    });
+  }
+  if (
+    env.API_OPERATOR_OIDC_ISSUER &&
+    env.API_OPERATOR_OIDC_AUDIENCE &&
+    env.API_OPERATOR_OIDC_JWKS_URL
+  ) {
+    identity.operator = createIdentityVerifier({
+      issuer: env.API_OPERATOR_OIDC_ISSUER,
+      audience: env.API_OPERATOR_OIDC_AUDIENCE,
+      keys: createRemoteJWKSet(new URL(env.API_OPERATOR_OIDC_JWKS_URL)),
+      requireMfa: true,
+    });
+  }
+
   const app = await createApp({
     logger,
+    identity,
     corsAllowedOrigins: API_CORS_ALLOWED_ORIGINS,
     hsts: PRODUCTION_LIKE.has(APP_ENV),
     database: db,

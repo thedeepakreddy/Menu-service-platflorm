@@ -4,11 +4,21 @@ import { parseApiEnv } from './env.js';
 
 // Synthetic connection string; sslmode=require so production-like cases are valid too.
 const DB_URL = 'postgres://app_runtime:synthetic@db.internal:5432/platform?sslmode=require';
+// Synthetic OIDC trust domains (required in staging/production, D-025).
+const OIDC = {
+  API_OWNER_OIDC_ISSUER: 'https://owners.idp.example',
+  API_OWNER_OIDC_AUDIENCE: 'platform-owner-api',
+  API_OWNER_OIDC_JWKS_URL: 'https://owners.idp.example/jwks',
+  API_OPERATOR_OIDC_ISSUER: 'https://operators.idp.example',
+  API_OPERATOR_OIDC_AUDIENCE: 'platform-operator-api',
+  API_OPERATOR_OIDC_JWKS_URL: 'https://operators.idp.example/jwks',
+};
 const valid = {
   APP_ENV: 'test',
   API_HOST: '127.0.0.1',
   API_PORT: '4000',
   API_DATABASE_URL: DB_URL,
+  ...OIDC,
 };
 
 describe('parseApiEnv', () => {
@@ -24,6 +34,7 @@ describe('parseApiEnv', () => {
         API_LOG_LEVEL: 'info',
         API_DATABASE_URL: DB_URL,
         API_DATABASE_POOL_MAX: 10,
+        ...OIDC,
       },
     });
   });
@@ -159,5 +170,54 @@ describe('database configuration (D-028, D-029)', () => {
     expect(parseApiEnv({ ...valid, API_DATABASE_POOL_MAX: '0' }).ok).toBe(false);
     expect(parseApiEnv({ ...valid, API_DATABASE_POOL_MAX: '101' }).ok).toBe(false);
     expect(parseApiEnv({ ...valid, API_DATABASE_POOL_MAX: '25' }).ok).toBe(true);
+  });
+});
+
+describe('identity trust domains (D-025)', () => {
+  it('requires both trust domains, over https, in staging and production', () => {
+    for (const appEnv of ['staging', 'production']) {
+      const without = {
+        ...valid,
+        APP_ENV: appEnv,
+        API_OPERATOR_OIDC_ISSUER: undefined,
+        API_OPERATOR_OIDC_AUDIENCE: undefined,
+        API_OPERATOR_OIDC_JWKS_URL: undefined,
+      };
+      expect(parseApiEnv(without).ok).toBe(false);
+      const http = {
+        ...valid,
+        APP_ENV: appEnv,
+        API_OWNER_OIDC_JWKS_URL: 'http://owners.idp.example/jwks',
+      };
+      expect(parseApiEnv(http).ok).toBe(false);
+      expect(parseApiEnv({ ...valid, APP_ENV: appEnv }).ok).toBe(true);
+    }
+  });
+
+  it('allows unconfigured domains in development and test (their routes fail closed)', () => {
+    const bare = {
+      APP_ENV: 'development',
+      API_HOST: '127.0.0.1',
+      API_PORT: '4000',
+      API_DATABASE_URL: DB_URL,
+    };
+    expect(parseApiEnv(bare).ok).toBe(true);
+  });
+
+  it('rejects a partially configured domain', () => {
+    const partial = { ...valid, API_OWNER_OIDC_JWKS_URL: undefined };
+    const result = parseApiEnv(partial);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.issues.map((i) => i.variable)).toContain('API_OWNER_OIDC_JWKS_URL');
+  });
+
+  it('rejects owner and operator sharing one issuer and audience', () => {
+    const merged = {
+      ...valid,
+      API_OPERATOR_OIDC_ISSUER: OIDC.API_OWNER_OIDC_ISSUER,
+      API_OPERATOR_OIDC_AUDIENCE: OIDC.API_OWNER_OIDC_AUDIENCE,
+    };
+    expect(parseApiEnv(merged).ok).toBe(false);
   });
 });

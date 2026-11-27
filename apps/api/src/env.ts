@@ -44,6 +44,19 @@ const postgresUrl = z.string().refine((value) => {
   }
 }, 'must be a postgres:// URL');
 
+const httpUrl = z.string().refine((value) => {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' || url.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}, 'must be an http(s) URL');
+
+/** One OIDC trust domain (D-025): all three variables together, or none. */
+const OIDC_DOMAINS = ['OWNER', 'OPERATOR'] as const;
+const OIDC_FIELDS = ['ISSUER', 'AUDIENCE', 'JWKS_URL'] as const;
+
 const corsOriginList = z
   .string()
   .transform((raw) =>
@@ -69,9 +82,56 @@ export const apiEnvSchema = z
     API_DATABASE_URL: postgresUrl,
     /** Optional. Maximum pooled database connections; defaults to 10. */
     API_DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
+    /**
+     * Owner and operator OIDC trust domains (D-025). Optional in development and test (routes
+     * of an unconfigured domain fail closed); required in staging and production.
+     */
+    API_OWNER_OIDC_ISSUER: httpUrl.optional(),
+    API_OWNER_OIDC_AUDIENCE: z.string().min(1).max(500).optional(),
+    API_OWNER_OIDC_JWKS_URL: httpUrl.optional(),
+    API_OPERATOR_OIDC_ISSUER: httpUrl.optional(),
+    API_OPERATOR_OIDC_AUDIENCE: z.string().min(1).max(500).optional(),
+    API_OPERATOR_OIDC_JWKS_URL: httpUrl.optional(),
   })
   .superRefine((env, ctx) => {
+    for (const domain of OIDC_DOMAINS) {
+      const set = OIDC_FIELDS.filter((f) => env[`API_${domain}_OIDC_${f}`] !== undefined);
+      if (set.length > 0 && set.length < OIDC_FIELDS.length) {
+        for (const f of OIDC_FIELDS.filter((x) => !set.includes(x))) {
+          ctx.addIssue({
+            code: 'custom',
+            path: [`API_${domain}_OIDC_${f}`],
+            message: 'all three OIDC variables of a trust domain must be set together',
+          });
+        }
+      }
+    }
+    if (
+      env.API_OWNER_OIDC_ISSUER !== undefined &&
+      env.API_OWNER_OIDC_ISSUER === env.API_OPERATOR_OIDC_ISSUER &&
+      env.API_OWNER_OIDC_AUDIENCE === env.API_OPERATOR_OIDC_AUDIENCE
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['API_OPERATOR_OIDC_AUDIENCE'],
+        message:
+          'owner and operator must be separate trust domains (issuer or audience must differ)',
+      });
+    }
     if (!PRODUCTION_LIKE.has(env.APP_ENV)) return;
+    for (const domain of OIDC_DOMAINS) {
+      for (const f of OIDC_FIELDS) {
+        const value = env[`API_${domain}_OIDC_${f}`];
+        const mustBeHttps = f !== 'AUDIENCE';
+        if (value === undefined || (mustBeHttps && !value.startsWith('https://'))) {
+          ctx.addIssue({
+            code: 'custom',
+            path: [`API_${domain}_OIDC_${f}`],
+            message: 'is required (https for URLs) in staging and production',
+          });
+        }
+      }
+    }
     if (env.API_CORS_ALLOWED_ORIGINS.some((origin) => !origin.startsWith('https://'))) {
       ctx.addIssue({
         code: 'custom',

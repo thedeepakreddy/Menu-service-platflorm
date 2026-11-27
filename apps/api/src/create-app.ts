@@ -9,6 +9,8 @@ import { AllExceptionsFilter } from './all-exceptions.filter.js';
 import { AppModule } from './app.module.js';
 import type { Db } from './infrastructure/database/database.js';
 import { DatabaseModule } from './infrastructure/database/database.module.js';
+import { IdentityModule } from './modules/identity/index.js';
+import type { IdentityConfig } from './modules/identity/index.js';
 import { TenancyModule } from './modules/tenancy/index.js';
 import { JsonLogger } from './logging/json-logger.js';
 import { requestLoggingMiddleware } from './logging/request-logging.js';
@@ -27,6 +29,8 @@ export type CreateAppOptions = {
   hsts?: boolean;
   /** The runtime-role database (D-028). Absent in tests that need no database. */
   database?: Db;
+  /** Owner and operator token verifiers (D-025). A missing one fails its routes closed. */
+  identity?: IdentityConfig;
 };
 
 export async function createApp(options: CreateAppOptions = {}): Promise<INestApplication> {
@@ -35,7 +39,10 @@ export async function createApp(options: CreateAppOptions = {}): Promise<INestAp
   Logger.overrideLogger(logger);
   const root = options.rootModule ?? AppModule;
   // The database module is global, so domain modules can inject DATABASE.
-  const entry = options.database === undefined ? root : rootWithDatabase(root, options.database);
+  const entry =
+    options.database === undefined
+      ? root
+      : rootWithDatabase(root, options.database, options.identity ?? {});
   const app = await NestFactory.create<NestExpressApplication>(entry);
   if (logger !== false) app.useLogger(logger);
   app.disable('x-powered-by');
@@ -50,8 +57,10 @@ export async function createApp(options: CreateAppOptions = {}): Promise<INestAp
 }
 
 /** Modules that need the database; mounted only when one is supplied. */
-function rootWithDatabase(root: Type, db: Db): Type {
-  @Module({ imports: [DatabaseModule.forRoot(db), root, TenancyModule] })
+function rootWithDatabase(root: Type, db: Db, identity: IdentityConfig): Type {
+  @Module({
+    imports: [DatabaseModule.forRoot(db), IdentityModule.forRoot(identity), root, TenancyModule],
+  })
   class RootWithDatabase {}
   return RootWithDatabase;
 }

@@ -535,15 +535,15 @@ conditional on this gate; it starts with the G-03 – G-08 entry decisions.
 [`architecture/phase-2-plan.md`](architecture/phase-2-plan.md). Decisions: D-024 – D-031.
 **Status: IN PROGRESS — not complete.**
 
-| Milestone                                | Status                     | Commit / evidence                                                                                                                                                                                                           |
-| ---------------------------------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| M2.0 Entry decisions and plan            | done                       | `aa7edec`; spike evidence in `architecture/spikes/`                                                                                                                                                                         |
-| M2.1 Database foundation and isolation   | done; CI verified          | `eaee6e6`, CI #13 success: Kysely/pg, migrations, RLS + FORCE, `withTenant()`, startup role check, `pnpm test:db` in CI                                                                                                     |
-| M2.2 Tenant resolution and context       | done (local); CI pending   | this commit: slug contract, `app.resolve_active_tenant` (SECURITY DEFINER, pinned search_path, active only), `GET /public/tenants/:slug` with one indistinguishable 404 for every non-public case; 13 real-PostgreSQL tests |
-| M2.3 Identity and authorization boundary | not started                | —                                                                                                                                                                                                                           |
-| M2.4 Provisioning and lifecycle          | not started                | —                                                                                                                                                                                                                           |
-| M2.5 Abuse controls                      | not started                | —                                                                                                                                                                                                                           |
-| M2.6 Web BFF session                     | **blocked** — D-025 vendor | owner decision required                                                                                                                                                                                                     |
+| Milestone                                | Status                     | Commit / evidence                                                                                                                                                                                                                                             |
+| ---------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M2.0 Entry decisions and plan            | done                       | `aa7edec`; spike evidence in `architecture/spikes/`                                                                                                                                                                                                           |
+| M2.1 Database foundation and isolation   | done; CI verified          | `eaee6e6`, CI #13 success: Kysely/pg, migrations, RLS + FORCE, `withTenant()`, startup role check, `pnpm test:db` in CI                                                                                                                                       |
+| M2.2 Tenant resolution and context       | done; CI pending           | this commit: slug contract, `app.resolve_active_tenant` (SECURITY DEFINER, pinned search_path, active only), `GET /public/tenants/:slug` with one indistinguishable 404 for every non-public case; 13 real-PostgreSQL tests                                   |
+| M2.3 Identity and authorization boundary | done (local); CI pending   | this commit: jose verifier (RS256/ES256 only, iss/aud/exp/nbf/iat), separate owner/operator trust domains, operator MFA, `app.find_account` (no auto-creation), owner access only via an active membership read under RLS; 15 real-PostgreSQL + 11 unit tests |
+| M2.4 Provisioning and lifecycle          | not started                | —                                                                                                                                                                                                                                                             |
+| M2.5 Abuse controls                      | not started                | —                                                                                                                                                                                                                                                             |
+| M2.6 Web BFF session                     | **blocked** — D-025 vendor | owner decision required                                                                                                                                                                                                                                       |
 
 ### M2.1 verification (local, Node 24.22.3, PostgreSQL 16.15 loopback cluster, scram-sha-256)
 
@@ -563,3 +563,12 @@ connection); no `TEST_DATABASE_ADMIN_URL` (suite fails with a clear message, exi
 `format:check`, `lint`, `typecheck`, `test` (266 passed), `arch` (101 modules, 201 deps),
 `build`, `test:db` (**44 passed**) — all exit 0. Mutations caught: removing the `status = 'active'`
 filter (3 tests: suspended/retired visible); removing the pinned `search_path` (1 test).
+
+### M2.3 verification (local)
+
+All gates exit 0: `test` 283 passed, `test:db` **59 passed**, e2e 10 passed, `pnpm audit --prod`
+clean (jose 6.2.18, MIT). Mutations caught: guard accepting any verified token without an account
+(2 tests); owner access without the membership check (2 tests: another owner's tenant and a
+revoked membership reachable); operator MFA requirement removed (1 test). Identity-provider
+**vendor still undecided** (D-025): verification uses local test issuers with real ES256/RS256
+signatures.

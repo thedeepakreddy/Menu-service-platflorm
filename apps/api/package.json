@@ -16,6 +16,7 @@
     "@nestjs/core": "^12.0.0",
     "@nestjs/platform-express": "^12.0.0",
     "@platform/contracts": "workspace:*",
+    "jose": "^6.2.18",
     "kysely": "^0.29.9",
     "pg": "^8.23.1",
     "reflect-metadata": "^0.2.2",
