@@ -54,6 +54,8 @@ until the owner approves it.
 | [D-029](#d-029) | G-08: runtime secrets management                                                  | approved (delegated, Part IX)           | 2026-11-27 |
 | [D-030](#d-030) | G-36: sessions via a server-side web BFF; CORS stays credential-free              | approved (delegated, Part IX)           | 2026-11-27 |
 | [D-031](#d-031) | G-34/G-38: rate limiting and request-cost controls                                | approved (delegated, Part IX)           | 2026-11-27 |
+| [D-032](#d-032) | Identity provider: ZITADEL Cloud (EU) — validation and implementation direction   | approved (owner) — **conditional**      | 2026-11-27 |
+| [D-033](#d-033) | M2.6 web login: BFF session design and operator MFA evidence                      | approved (delegated)                    | 2026-11-27 |
 
 ---
 
@@ -937,3 +939,88 @@ exists, and recovery events received from the provider are logged without secret
   proxy's key until a trusted-proxy setting exists. Both must be resolved before running more
   than one instance or deploying behind a proxy (Phase 10, with G-09). Limits reset when the
   process restarts.
+
+---
+
+## D-032
+
+**Title:** Identity provider — ZITADEL Cloud, EU instance, OpenID Connect
+**Status:** **approved by the owner as the authorized direction for technical validation and
+implementation — conditional.** Production use is **not** approved until the conditions below
+are verified and recorded.
+**Approval evidence:** Owner message (2026-11-27): "ZITADEL Cloud, EU deployment, using OpenID
+Connect (OIDC). Treat this as the authorized direction for technical validation and
+implementation planning, subject to verification of contractual EU data residency, plan
+capabilities, pricing, quotas, security requirements, licensing implications, export/recovery and
+exit strategy before production use."
+**Evidence:** [`architecture/spikes/zitadel-cloud-verification.md`](architecture/spikes/zitadel-cloud-verification.md).
+
+**Decision.**
+
+- ZITADEL Cloud is the OIDC provider for both trust domains (D-025), on one **EU** instance:
+  an **operators** organization with "Force MFA" (not the local-users-only variant), its own
+  project and web client; an **owners** project and web client. Self-registration off;
+  e-mail-based automatic account linking off; Development mode off in production.
+- ZITADEL is used **only** for authentication. The application remains the source of truth for
+  tenants, memberships, owner authorization, operator separation, tenant lifecycle and
+  suspension, application permissions and session policy (D-027, D-028, D-030). ZITADEL
+  organizations, roles and grants are **not** used as tenancy or authorization data.
+- No ZITADEL-specific code: integration is standard OIDC configured by environment variables
+  (issuer, client ids, audiences, extra scopes such as
+  `urn:zitadel:iam:org:project:id:{projectId}:aud`). The `IdentityVerifier` port and the web
+  login use only standard discovery, JWKS, PKCE, state, nonce and RP-initiated logout.
+
+**Conditions before production (owner to verify and record).** All eight items in the
+verification record's "must be confirmed contractually" list. In particular the DPA currently
+**permits processing outside the EU**, so EU residency is not yet a contractual guarantee.
+
+**Alternatives considered.** Auth0/Okta, Microsoft Entra External ID, AWS Cognito, Google
+Identity Platform (managed; generally non-EU-headquartered vendors), Keycloak (self-hosted;
+operating burden). ZITADEL's EU location, Swiss operator, open-source core (exit to self-hosting)
+and standard OIDC were the owner's reasons.
+
+**Residual risks.** Residency not contractual (above). `amr` exists only in ID tokens (handled by
+D-033). Token lifetimes are instance-wide. Signing keys can rotate without notice (JWKS cached
+and refreshed on unknown `kid`, handled by `jose`). Cloud rate limit is per IP. Passkeys are not
+exportable (exit would require passkey re-enrolment). AGPL-3.0 core: no obligation while used as
+a service; self-hosting a modified version would trigger AGPL obligations.
+
+## D-033
+
+**Title:** M2.6 web login — BFF session design and operator MFA evidence
+**Status:** approved (delegated, Part IX; refines D-025 and D-030), 2026-11-27
+
+**Operator MFA evidence (amends D-025).** ZITADEL carries `amr` only in the ID token. The API
+therefore accepts an operator request only with **both**:
+
+1. `Authorization: Bearer <access token>` — operator issuer and operator API audience; and
+2. `X-Authentication-Proof: <ID token>` — same issuer and **same subject**, audience = the operator
+   web client id, `amr` contains `mfa`, and `auth_time` within the configured maximum age.
+
+Where an identity provider puts `amr` in access tokens, the proof is not configured and the API
+checks `amr` on the access token instead (the D-025 behaviour). Either way the API itself
+enforces operator MFA; the provider's "Force MFA" policy is a second layer, not the only one.
+
+**Sessions (refines D-030).** "Server-side session" here means the session is created, held and
+used only by the web server: the browser receives a single encrypted, authenticated cookie
+(JWE, A256GCM, key from `WEB_SESSION_SECRET`) that its JavaScript cannot read (`HttpOnly`),
+sent only over TLS (`Secure`), not cross-site (`SameSite=Lax`), host-only. Tokens never reach
+browser JavaScript. It is **stateless**: there is no session table, because the web app has no
+database access (D-012) and a store would need new infrastructure.
+
+- Lifetime: the shorter of the access token's expiry and an absolute maximum (owners 8 h,
+  operators 1 h). No refresh tokens are requested; on expiry the user signs in again (silently if
+  the provider session is still valid).
+- Invalidation: logout deletes the cookie and calls the provider's end-session endpoint;
+  rotating `WEB_SESSION_SECRET` invalidates every session. **Residual:** a stolen cookie stays
+  valid until its expiry; account-level revocation at the provider takes effect at token expiry.
+  Business revocation is immediate regardless, because the API checks tenant status and
+  membership on every request (D-027). A revocable server-side store is recorded as a follow-up
+  for the owner (Phase 6/10).
+- Login transaction: `state`, `nonce` and a PKCE (S256) verifier are generated per login and kept
+  in a separate encrypted, 10-minute, path-scoped cookie; the callback checks all three.
+- CSRF: logout is POST-only and requires `Origin` to equal the configured public origin; there
+  are no other state-changing web routes in Phase 2. Redirect URIs are built from the configured
+  public origin, never from request headers.
+- Library: `openid-client` 6.x (MIT, certified OpenID RP library by the `jose` author) instead of a
+  hand-written protocol implementation.

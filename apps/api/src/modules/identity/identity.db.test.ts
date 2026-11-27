@@ -178,3 +178,76 @@ describe('unconfigured trust domains fail closed (D-025)', () => {
     }
   });
 });
+
+// D-033: providers such as ZITADEL carry amr only in the ID token. The API then requires the
+// access token AND the ID token as an authentication proof, for the same issuer and subject.
+describe('operator MFA proven by the ID token (D-033)', () => {
+  const WEB_CLIENT = 'operator-web-client';
+  let proofApp: INestApplication;
+  let proofBase: string;
+
+  beforeAll(async () => {
+    proofApp = await createApp({
+      logger: false,
+      database: createDatabase({ connectionString: runtimeUrl, maxConnections: 2 }),
+      identity: {
+        operator: createIdentityVerifier({
+          issuer: operators.issuer,
+          audience: operators.audience,
+          keys: operators.keys,
+        }),
+        operatorProof: createIdentityVerifier({
+          issuer: operators.issuer,
+          audience: WEB_CLIENT,
+          keys: operators.keys,
+          requireMfa: true,
+          maxAuthAgeSeconds: 3600,
+        }),
+      },
+    });
+    await proofApp.listen(0, '127.0.0.1');
+    const { port } = (proofApp.getHttpServer() as Server).address() as AddressInfo;
+    proofBase = `http://127.0.0.1:${String(port)}`;
+  });
+
+  afterAll(async () => {
+    await proofApp.close();
+  });
+
+  const now = () => Math.floor(Date.now() / 1000);
+  // Like ZITADEL: the access token has no amr.
+  const access = (sub = 'operator-1') => operators.token({ sub });
+  const idToken = (claims: Record<string, unknown> = {}) =>
+    operators.token({
+      sub: 'operator-1',
+      aud: WEB_CLIENT,
+      amr: ['pwd', 'otp', 'mfa'],
+      auth_time: now() - 30,
+      ...claims,
+    });
+
+  async function session(accessToken: string, proof?: string) {
+    const headers: Record<string, string> = { authorization: `Bearer ${accessToken}` };
+    if (proof !== undefined) headers['x-authentication-proof'] = proof;
+    return (await fetch(`${proofBase}/operator/session`, { headers })).status;
+  }
+
+  it('accepts an access token with a valid MFA proof for the same subject', async () => {
+    expect(await session(await access(), await idToken())).toBe(200);
+  });
+
+  it.each([
+    ['no proof', () => Promise.resolve(undefined)],
+    ['a proof without MFA', () => idToken({ amr: ['pwd'] })],
+    ['a proof for another subject', () => idToken({ sub: 'someone-else' })],
+    ['a proof for another audience (the API audience)', () => idToken({ aud: operators.audience })],
+    ['a stale authentication', () => idToken({ auth_time: now() - 7200 })],
+    [
+      'a proof from another issuer',
+      () => owners.token({ sub: 'operator-1', aud: WEB_CLIENT, amr: ['mfa'], auth_time: now() }),
+    ],
+    ['the access token used as its own proof', () => access()],
+  ])('refuses %s with 401', async (_label, makeProof) => {
+    expect(await session(await access(), await makeProof())).toBe(401);
+  });
+});

@@ -29,6 +29,13 @@ export type VerifierOptions = {
   keys: JWTVerifyGetKey;
   /** Operators must show multi-factor authentication (RFC 8176 `amr` contains `mfa`). */
   requireMfa?: boolean;
+  /**
+   * Maximum age in seconds of the authentication event (`auth_time`, required when set). Used for
+   * the operator authentication proof (D-033) so that an old MFA login cannot be reused forever.
+   */
+  maxAuthAgeSeconds?: number;
+  /** Clock for tests (seconds since epoch). */
+  nowSeconds?: () => number;
 };
 
 /** Upper bound on token size; anything larger is rejected before any parsing. */
@@ -57,6 +64,13 @@ export function createIdentityVerifier(options: VerifierOptions): IdentityVerifi
         if (options.requireMfa === true) {
           const amr: unknown = payload.amr;
           if (!Array.isArray(amr) || !amr.includes('mfa')) return undefined;
+        }
+        if (options.maxAuthAgeSeconds !== undefined) {
+          const authTime: unknown = payload.auth_time;
+          const now = options.nowSeconds?.() ?? Math.floor(Date.now() / 1000);
+          if (typeof authTime !== 'number' || authTime > now + CLOCK_TOLERANCE_SECONDS)
+            return undefined;
+          if (now - authTime > options.maxAuthAgeSeconds) return undefined;
         }
         return { issuer: options.issuer, subject: payload.sub };
       } catch (error) {

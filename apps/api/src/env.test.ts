@@ -37,6 +37,7 @@ describe('parseApiEnv', () => {
         API_LOG_LEVEL: 'info',
         API_DATABASE_URL: DB_URL,
         API_DATABASE_POOL_MAX: 10,
+        API_OPERATOR_MFA_MAX_AGE_SECONDS: 3600,
         API_OPERATOR_DATABASE_URL: OPERATOR_DB_URL,
         ...OIDC,
       },

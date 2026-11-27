@@ -97,6 +97,13 @@ export const apiEnvSchema = z
     API_OPERATOR_OIDC_ISSUER: httpUrl.optional(),
     API_OPERATOR_OIDC_AUDIENCE: z.string().min(1).max(500).optional(),
     API_OPERATOR_OIDC_JWKS_URL: httpUrl.optional(),
+    /**
+     * Optional (D-033). The operator WEB client id: when set, operator MFA is proven by the ID
+     * token sent in X-Authentication-Proof (amr contains mfa, auth_time within
+     * API_OPERATOR_MFA_MAX_AGE_SECONDS) instead of by the access token's amr.
+     */
+    API_OPERATOR_OIDC_PROOF_AUDIENCE: z.string().min(1).max(500).optional(),
+    API_OPERATOR_MFA_MAX_AGE_SECONDS: z.coerce.number().int().min(60).max(86_400).default(3600),
   })
   .superRefine((env, ctx) => {
     for (const domain of OIDC_DOMAINS) {

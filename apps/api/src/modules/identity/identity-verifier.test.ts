@@ -104,3 +104,32 @@ describe('bearerToken', () => {
     }
   });
 });
+
+describe('authentication age for the operator proof (D-033)', () => {
+  const now = Math.floor(Date.now() / 1000);
+  const proof = () =>
+    createIdentityVerifier({
+      issuer: owners.issuer,
+      audience: owners.audience,
+      keys: owners.keys,
+      requireMfa: true,
+      maxAuthAgeSeconds: 600,
+      nowSeconds: () => now,
+    });
+
+  it('accepts a recent MFA authentication', async () => {
+    expect(
+      await proof().verify(await owners.token({ amr: ['mfa'], auth_time: now - 60 })),
+    ).toBeDefined();
+  });
+
+  it.each([
+    ['no auth_time', { amr: ['mfa'] }],
+    ['an old authentication', { amr: ['mfa'], auth_time: now - 601 }],
+    ['an auth_time in the future', { amr: ['mfa'], auth_time: now + 3600 }],
+    ['a non-numeric auth_time', { amr: ['mfa'], auth_time: 'yesterday' }],
+    ['a recent login without MFA', { amr: ['pwd'], auth_time: now - 60 }],
+  ])('rejects %s', async (_label, claims) => {
+    expect(await proof().verify(await owners.token(claims))).toBeUndefined();
+  });
+});

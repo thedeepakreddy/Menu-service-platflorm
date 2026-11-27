@@ -58,12 +58,24 @@ async function main(): Promise<void> {
     env.API_OPERATOR_OIDC_AUDIENCE &&
     env.API_OPERATOR_OIDC_JWKS_URL
   ) {
+    const keys = createRemoteJWKSet(new URL(env.API_OPERATOR_OIDC_JWKS_URL));
+    const proofAudience = env.API_OPERATOR_OIDC_PROOF_AUDIENCE;
+    // D-033: MFA is proven by the ID token when the provider keeps amr out of access tokens.
     identity.operator = createIdentityVerifier({
       issuer: env.API_OPERATOR_OIDC_ISSUER,
       audience: env.API_OPERATOR_OIDC_AUDIENCE,
-      keys: createRemoteJWKSet(new URL(env.API_OPERATOR_OIDC_JWKS_URL)),
-      requireMfa: true,
+      keys,
+      requireMfa: proofAudience === undefined,
     });
+    if (proofAudience !== undefined) {
+      identity.operatorProof = createIdentityVerifier({
+        issuer: env.API_OPERATOR_OIDC_ISSUER,
+        audience: proofAudience,
+        keys,
+        requireMfa: true,
+        maxAuthAgeSeconds: env.API_OPERATOR_MFA_MAX_AGE_SECONDS,
+      });
+    }
   }
 
   const app = await createApp({

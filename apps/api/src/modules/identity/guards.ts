@@ -11,7 +11,18 @@ import type { AccountKind } from './identity.service.js';
  * Trust domains (D-025). A missing verifier means that kind of identity is not configured: its
  * routes fail closed (401). Staging and production refuse to start without both (env.ts).
  */
-export type IdentityConfig = { owner?: IdentityVerifier; operator?: IdentityVerifier };
+export type IdentityConfig = {
+  owner?: IdentityVerifier;
+  operator?: IdentityVerifier;
+  /**
+   * Operator MFA evidence from the ID token (D-033), for providers such as ZITADEL that put `amr`
+   * only in ID tokens. When set, operator requests need BOTH the access token and this proof in
+   * `X-Authentication-Proof`, for the same issuer and subject.
+   */
+  operatorProof?: IdentityVerifier;
+};
+
+export const AUTHENTICATION_PROOF_HEADER = 'x-authentication-proof';
 export const IDENTITY = Symbol('IDENTITY');
 
 abstract class PrincipalGuard implements CanActivate {
@@ -30,6 +41,14 @@ abstract class PrincipalGuard implements CanActivate {
     if (verifier === undefined || token === undefined) throw new UnauthorizedException();
     const verified = await verifier.verify(token);
     if (verified === undefined) throw new UnauthorizedException();
+    if (this.kind === 'operator' && this.identity.operatorProof !== undefined) {
+      const proof = await this.identity.operatorProof.verify(
+        req.header(AUTHENTICATION_PROOF_HEADER) ?? '',
+      );
+      if (proof?.issuer !== verified.issuer || proof.subject !== verified.subject) {
+        throw new UnauthorizedException();
+      }
+    }
     const accountId = await this.accounts.findAccount(verified, this.kind);
     if (accountId === undefined) throw new UnauthorizedException();
     req.principal = { kind: this.kind, accountId };
