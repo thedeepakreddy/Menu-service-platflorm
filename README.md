@@ -2,6 +2,8 @@
 
 Multitenant hospitality digital-experience SaaS platform.
 
+Built by Deepak, assisted by Claude.
+
 - **Specifications and governance:** [`docs/README.md`](docs/README.md)
 - **Current phase status:** [`docs/STATUS.md`](docs/STATUS.md)
 - **Working in this repository (humans and agents):** [`CLAUDE.md`](CLAUDE.md)

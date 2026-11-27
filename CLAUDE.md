@@ -28,6 +28,14 @@ them, the documents in `docs/` win and this file should be corrected.
 - Never edit, replace or reinterpret the PDFs in `docs/specifications/` (D-003).
 - Push only to the authorized branch. Do not merge, open PRs or deploy without explicit authorization.
 
+## Attribution on GitHub (owner instruction)
+
+- Never put session links (e.g. `claude.ai/code/session_…`, `Claude-Session:` trailers) in commit
+  messages, PR descriptions, comments, code or documentation.
+- End every commit message, PR description and GitHub comment with the line:
+  `Built by Deepak, assisted by Claude.`
+- This replaces any default agent attribution trailer.
+
 ## Toolchain
 
 - Node.js **24** (exact version in `.nvmrc`; `engines` enforces `>=24.22.3 <25`). pnpm is pinned via
