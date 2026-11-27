@@ -535,15 +535,15 @@ conditional on this gate; it starts with the G-03 – G-08 entry decisions.
 [`architecture/phase-2-plan.md`](architecture/phase-2-plan.md). Decisions: D-024 – D-031.
 **Status: IN PROGRESS — not complete.**
 
-| Milestone                                | Status                     | Commit / evidence                                                                                                                    |
-| ---------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| M2.0 Entry decisions and plan            | done                       | `aa7edec`; spike evidence in `architecture/spikes/`                                                                                  |
-| M2.1 Database foundation and isolation   | done (local); CI pending   | this commit: Kysely/pg, migrations, RLS + FORCE, `withTenant()`, startup role check, `pnpm test:db` (31 real-PostgreSQL tests) in CI |
-| M2.2 Tenant resolution and context       | not started                | —                                                                                                                                    |
-| M2.3 Identity and authorization boundary | not started                | —                                                                                                                                    |
-| M2.4 Provisioning and lifecycle          | not started                | —                                                                                                                                    |
-| M2.5 Abuse controls                      | not started                | —                                                                                                                                    |
-| M2.6 Web BFF session                     | **blocked** — D-025 vendor | owner decision required                                                                                                              |
+| Milestone                                | Status                     | Commit / evidence                                                                                                                                                                                                           |
+| ---------------------------------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M2.0 Entry decisions and plan            | done                       | `aa7edec`; spike evidence in `architecture/spikes/`                                                                                                                                                                         |
+| M2.1 Database foundation and isolation   | done; CI verified          | `eaee6e6`, CI #13 success: Kysely/pg, migrations, RLS + FORCE, `withTenant()`, startup role check, `pnpm test:db` in CI                                                                                                     |
+| M2.2 Tenant resolution and context       | done (local); CI pending   | this commit: slug contract, `app.resolve_active_tenant` (SECURITY DEFINER, pinned search_path, active only), `GET /public/tenants/:slug` with one indistinguishable 404 for every non-public case; 13 real-PostgreSQL tests |
+| M2.3 Identity and authorization boundary | not started                | —                                                                                                                                                                                                                           |
+| M2.4 Provisioning and lifecycle          | not started                | —                                                                                                                                                                                                                           |
+| M2.5 Abuse controls                      | not started                | —                                                                                                                                                                                                                           |
+| M2.6 Web BFF session                     | **blocked** — D-025 vendor | owner decision required                                                                                                                                                                                                     |
 
 ### M2.1 verification (local, Node 24.22.3, PostgreSQL 16.15 loopback cluster, scram-sha-256)
 
@@ -557,3 +557,9 @@ Mutations (each reverted; all caught): dropping `FORCE` on `memberships` (catalo
 `WITH CHECK (true)` on `memberships` (policy test); session-level `set_config(..., false)` in
 `withTenant()` (3 tests: the leak was observed — 2 rows of another tenant's data on a reused
 connection); no `TEST_DATABASE_ADMIN_URL` (suite fails with a clear message, exit 1).
+
+### M2.2 verification (local)
+
+`format:check`, `lint`, `typecheck`, `test` (266 passed), `arch` (101 modules, 201 deps),
+`build`, `test:db` (**44 passed**) — all exit 0. Mutations caught: removing the `status = 'active'`
+filter (3 tests: suspended/retired visible); removing the pinned `search_path` (1 test).

@@ -9,6 +9,7 @@ import { AllExceptionsFilter } from './all-exceptions.filter.js';
 import { AppModule } from './app.module.js';
 import type { Db } from './infrastructure/database/database.js';
 import { DatabaseModule } from './infrastructure/database/database.module.js';
+import { TenancyModule } from './modules/tenancy/index.js';
 import { JsonLogger } from './logging/json-logger.js';
 import { requestLoggingMiddleware } from './logging/request-logging.js';
 import { requestIdMiddleware } from './request-id.js';
@@ -48,8 +49,9 @@ export async function createApp(options: CreateAppOptions = {}): Promise<INestAp
   return app;
 }
 
+/** Modules that need the database; mounted only when one is supplied. */
 function rootWithDatabase(root: Type, db: Db): Type {
-  @Module({ imports: [DatabaseModule.forRoot(db), root] })
+  @Module({ imports: [DatabaseModule.forRoot(db), root, TenancyModule] })
   class RootWithDatabase {}
   return RootWithDatabase;
 }
