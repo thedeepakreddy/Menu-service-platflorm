@@ -914,3 +914,26 @@ exists, and recovery events received from the provider are logged without secret
   proxy is explicitly configured; `X-Forwarded-For` is not trusted by default.
 - Credential-guessing protection for login itself is the identity provider's responsibility
   (D-025, D-026).
+
+**Implementation (M2.5, 2026-11-27).** `apps/api/src/infrastructure/rate-limit/`:
+
+| Group           | Routes                      | Default limit (per instance) | Key                    |
+| --------------- | --------------------------- | ---------------------------- | ---------------------- |
+| `public-tenant` | `GET /public/tenants/:slug` | 120 / minute                 | group + socket address |
+| `owner`         | `/owner/*`                  | 120 / minute                 | group + socket address |
+| `operator`      | `/operator/*`               | 30 / minute                  | group + socket address |
+
+- The guard runs **before** authentication, so failed authentication attempts consume the
+  budget (token guessing is limited before any verification work).
+- Unknown and malformed tenant slugs consume the same budget as valid ones.
+- Bounded key table (50,000 keys). **Fail closed for new keys when it is full of live keys**:
+  failing open would let a client bypass limits by rotating source addresses; existing keys
+  keep their budgets. Expired keys are evicted first.
+- 429 responses use the error envelope plus `Retry-After`, and keep the security headers.
+- Logs record `rate_limited` with the group and reason only, **never the client address**
+  (D-020).
+- **Not distributed.** Each instance counts on its own: N instances allow up to N × limit.
+  `X-Forwarded-For` is not trusted, so behind a reverse proxy all clients would share the
+  proxy's key until a trusted-proxy setting exists. Both must be resolved before running more
+  than one instance or deploying behind a proxy (Phase 10, with G-09). Limits reset when the
+  process restarts.

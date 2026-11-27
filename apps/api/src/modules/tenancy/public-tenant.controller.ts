@@ -1,6 +1,7 @@
-import { Controller, Get, NotFoundException, Param } from '@nestjs/common';
+import { Controller, Get, NotFoundException, Param, UseGuards } from '@nestjs/common';
 import type { PublicTenant } from '@platform/contracts';
 
+import { RateLimit, RateLimitGuard } from '../../infrastructure/rate-limit/rate-limit.js';
 import { TenancyService } from './tenancy.service.js';
 
 /**
@@ -9,6 +10,8 @@ import { TenancyService } from './tenancy.service.js';
  * reveals nothing about tenants that are not publicly active.
  */
 @Controller('public/tenants')
+@UseGuards(RateLimitGuard)
+@RateLimit('public-tenant')
 export class PublicTenantController {
   constructor(private readonly tenancy: TenancyService) {}
 

@@ -37,6 +37,16 @@ async function startApp(withOperatorDb: boolean) {
       ? { operatorDatabase: createDatabase({ connectionString: operatorUrl, maxConnections: 4 }) }
       : {}),
     identity,
+    // This suite tests lifecycle semantics and sends many operator requests; rate limiting has its
+    // own suite (infrastructure/rate-limit/rate-limit.db.test.ts), so limits here are generous.
+    rateLimits: {
+      policies: {
+        'public-tenant': { limit: 10_000, windowMs: 60_000 },
+        owner: { limit: 10_000, windowMs: 60_000 },
+        operator: { limit: 10_000, windowMs: 60_000 },
+      },
+      maxKeys: 1_000,
+    },
   });
   await instance.listen(0, '127.0.0.1');
   const { port } = (instance.getHttpServer() as Server).address() as AddressInfo;

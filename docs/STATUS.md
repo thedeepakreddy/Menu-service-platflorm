@@ -542,7 +542,7 @@ conditional on this gate; it starts with the G-03 – G-08 entry decisions.
 | M2.2 Tenant resolution and context       | done; CI verified          | `53b79c9`, CI #14 (`45952364343`) success: slug contract, `app.resolve_active_tenant`, `GET /public/tenants/:slug`; 13 real-PostgreSQL tests                                                                                                                                                |
 | M2.3 Identity and authorization boundary | done; CI verified          | `e5933cc`, CI #15 (`45952916611`) success: jose verifier (RS256/ES256 only, iss/aud/exp/nbf/iat), separate owner/operator trust domains, operator MFA, `app.find_account` (no auto-creation), owner access only via an active membership read under RLS; 15 real-PostgreSQL + 11 unit tests |
 | M2.4 Provisioning and lifecycle          | done (local); CI pending   | see "M2.4 verification": operator-only audited SECURITY DEFINER provisioning and compare-and-set lifecycle; separate operator credential; 32 real-PostgreSQL tests                                                                                                                          |
-| M2.5 Abuse controls                      | not started                | —                                                                                                                                                                                                                                                                                           |
+| M2.5 Abuse controls                      | done (local); CI pending   | see "M2.5 verification": in-process fixed-window limits before authentication, bounded fail-closed key table; instance-local only (D-031)                                                                                                                                                   |
 | M2.6 Web BFF session                     | **blocked** — D-025 vendor | owner decision required                                                                                                                                                                                                                                                                     |
 
 ### M2.1 verification (local, Node 24.22.3, PostgreSQL 16.15 loopback cluster, scram-sha-256)
@@ -588,3 +588,14 @@ API refuses an owner-role operator connection.
 Mutations caught: no compare-and-set (3 tests), operator function granted to the runtime role
 (1), no audit insert on status change (3), no attempt log (1; a first attempt at this mutation
 did not apply because the code had been reformatted, and was redone).
+
+### M2.5 verification (local)
+
+All gates exit 0: `test` 293 passed, `test:db` **97 passed**, e2e 10 passed. Covered: window
+limit and Retry-After, window reset, key independence, fail-closed capacity with bounded memory
+under a 50,000-key flood, eviction; over HTTP: 429 envelope with Retry-After and security
+headers, invalid slugs consume budget, failed authentication consumes budget, groups
+independent, no client address in logs. Mutations caught: authentication guard ordered before the
+rate limiter (2 tests); capacity failing open (2 tests; the first attempt did not apply because of
+formatting and was redone). The M2.4 lifecycle suite now configures generous limits explicitly,
+because its 10-way concurrency test exceeded the new operator default (429s observed).

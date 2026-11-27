@@ -9,6 +9,9 @@ import { AllExceptionsFilter } from './all-exceptions.filter.js';
 import { AppModule } from './app.module.js';
 import type { Db } from './infrastructure/database/database.js';
 import { DatabaseModule } from './infrastructure/database/database.module.js';
+import { DEFAULT_RATE_LIMITS } from './infrastructure/rate-limit/rate-limit.js';
+import type { RateLimitConfig } from './infrastructure/rate-limit/rate-limit.js';
+import { RateLimitModule } from './infrastructure/rate-limit/rate-limit.module.js';
 import { IdentityModule } from './modules/identity/index.js';
 import type { IdentityConfig } from './modules/identity/index.js';
 import { OperatorTenantsModule } from './modules/operator-tenants/index.js';
@@ -34,6 +37,8 @@ export type CreateAppOptions = {
   identity?: IdentityConfig;
   /** The operator-role database (D-028). Absent: operator actions fail closed (503). */
   operatorDatabase?: Db;
+  /** Rate limits (D-031); defaults to DEFAULT_RATE_LIMITS. Instance-local. */
+  rateLimits?: RateLimitConfig;
 };
 
 export async function createApp(options: CreateAppOptions = {}): Promise<INestApplication> {
@@ -45,7 +50,13 @@ export async function createApp(options: CreateAppOptions = {}): Promise<INestAp
   const entry =
     options.database === undefined
       ? root
-      : rootWithDatabase(root, options.database, options.identity ?? {}, options.operatorDatabase);
+      : rootWithDatabase(
+          root,
+          options.database,
+          options.identity ?? {},
+          options.operatorDatabase,
+          options.rateLimits ?? DEFAULT_RATE_LIMITS,
+        );
   const app = await NestFactory.create<NestExpressApplication>(entry);
   if (logger !== false) app.useLogger(logger);
   app.disable('x-powered-by');
@@ -65,10 +76,12 @@ function rootWithDatabase(
   db: Db,
   identity: IdentityConfig,
   operatorDb: Db | undefined,
+  rateLimits: RateLimitConfig,
 ): Type {
   @Module({
     imports: [
       DatabaseModule.forRoot(db, operatorDb),
+      RateLimitModule.forRoot(rateLimits),
       IdentityModule.forRoot(identity),
       root,
       TenancyModule,

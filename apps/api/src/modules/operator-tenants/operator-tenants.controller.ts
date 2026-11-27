@@ -16,6 +16,7 @@ import {
 import type { OperatorTenant } from '@platform/contracts';
 import type { Request } from 'express';
 
+import { RateLimit, RateLimitGuard } from '../../infrastructure/rate-limit/rate-limit.js';
 import { OperatorGuard } from '../identity/index.js';
 import { OperatorTenantsService } from './operator-tenants.service.js';
 
@@ -25,7 +26,8 @@ import { OperatorTenantsService } from './operator-tenants.service.js';
  * contracts before anything reaches the database.
  */
 @Controller('operator/tenants')
-@UseGuards(OperatorGuard)
+@UseGuards(RateLimitGuard, OperatorGuard)
+@RateLimit('operator')
 export class OperatorTenantsController {
   constructor(private readonly tenants: OperatorTenantsService) {}
 
