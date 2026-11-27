@@ -333,3 +333,80 @@ Each mutation was applied temporarily and restored byte-identical:
 
 - GitHub Actions on the residual-remediation commit: see the CI run recorded after the push.
 - R-03, R-05 and R-10 remain open (not authorized).
+
+## Phase 1 completion work (2026-11-27)
+
+**Authorization:** owner message "PHASE 1 — COMPLETE REMAINING WORK, CLOSEOUT PREPARATION &
+FINAL VERIFICATION". **Status:** implemented and **self-verified** (an internal adversarial
+review by the implementing session, not an independent audit). **Closure: CONDITIONALLY READY** —
+owner decisions and an independent audit remain; see
+[`audit/phase-1-closure-package.md`](audit/phase-1-closure-package.md). Phase 2 remains **not
+authorized**.
+
+| Item                                              | Value                                                          |
+| ------------------------------------------------- | -------------------------------------------------------------- |
+| Starting commit                                   | `a0c9534b101bf878becdad1e7f5422601a3e4e0b`                     |
+| Security and logging baseline (G-36, G-38, L-05)  | `18a1a08`                                                      |
+| Architecture enforcement (N-01, N-02)             | `162f480`                                                      |
+| Governance, S-02, closure package, audit hand-off | `561790e`                                                      |
+| Redaction hardening after adversarial review      | `19e73ab77c01d305c30a2780d8d1dbef228399d2` (final code commit) |
+| Decisions                                         | D-019 – D-021 (awaiting owner review)                          |
+| Specification PDFs                                | unchanged (SHA-256 verified)                                   |
+
+### Clean-room verification of `19e73ab`
+
+Fresh clone; empty pnpm store (356 downloaded, 0 reused) and empty Corepack cache; Node v24.22.3;
+`APP_ENV=test`. Playwright used the Chromium already installed in the container (not a fresh
+download).
+
+| #   | Check                                                                                                     | Result                                                                                                                                                                                                                                      |
+| --- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `pnpm install --frozen-lockfile --store-dir <empty>`                                                      | exit 0                                                                                                                                                                                                                                      |
+| 2   | `pnpm format:check`, `pnpm lint`, `pnpm typecheck`                                                        | exit 0                                                                                                                                                                                                                                      |
+| 3   | `pnpm test`                                                                                               | **187 passed**: contracts 12, web 8, api 85, tests 82 (architecture 54, build-output 4, policy 20, startup 8) — includes CORS, headers, logging, redaction, filter-guard, N-01, N-02 and policy tests                                       |
+| 4   | `pnpm arch`                                                                                               | no violations (77 modules, 124 dependencies)                                                                                                                                                                                                |
+| 5   | `pnpm build`                                                                                              | exit 0                                                                                                                                                                                                                                      |
+| 6   | `pnpm test:e2e`                                                                                           | **10 passed** (adds API and web security-header checks and the CORS default)                                                                                                                                                                |
+| 7   | `pnpm audit` / `pnpm audit --prod`                                                                        | no known vulnerabilities                                                                                                                                                                                                                    |
+| 8   | Frozen install on Node 22.23.5                                                                            | exit 1, `ERR_PNPM_UNSUPPORTED_ENGINE`                                                                                                                                                                                                       |
+| 9   | Built API via `main.ts`, with `APP_ENV=production` and `API_CORS_ALLOWED_ORIGINS=https://allowed.example` | Allowed-origin preflight: `204` with the origin echoed and no credentials header. Other origin: no CORS headers. HSTS present. Every stdout line is valid JSON. **0** occurrences of the bearer, cookie, query-token and e-mail values sent |
+| 10  | N-01 reproduction (`apps/web/lib/h.ts` imports `vitest`, used from `src/`)                                | rejected: `no-dev-deps-in-production-code`                                                                                                                                                                                                  |
+| 11  | `git status` afterwards                                                                                   | clean                                                                                                                                                                                                                                       |
+
+### Mutation checks (each restored byte-identical; all caught)
+
+| Mutation                                             | Tests failing               |
+| ---------------------------------------------------- | --------------------------- |
+| N-01: revert the devDependency scope to `src/`       | 1                           |
+| N-01: also exempt `next.config.*`                    | 1                           |
+| N-01: drop the tooling-config laundering guard       | 1                           |
+| H-01: add an unanchored `node_modules/` exclusion    | 6 (anchoring and integrity) |
+| N-02: revert the `pnpm arch` scan list               | 1                           |
+| N-02: drop `packages` from the `pnpm arch` scan list | 1                           |
+| N-02: CI stops running `pnpm arch`                   | 1                           |
+| Drop `X-Frame-Options`                               | 1                           |
+| CORS `credentials: true`                             | 1                           |
+| CORS reflects any origin                             | 4                           |
+| Accept a wildcard origin                             | 3                           |
+| Allow http origins in production                     | 2                           |
+| Stop redacting the `authorization` key               | 1                           |
+| Stop redacting URL credentials                       | 4                           |
+| Log the full URL with query string                   | 1                           |
+| Log request headers                                  | 1                           |
+| Stop redacting e-mail (clean-room clone)             | 1                           |
+| Case-sensitive `Bearer` (clean-room clone)           | 1                           |
+| Exact-name key matching (clean-room clone)           | 2                           |
+
+### Internal adversarial review
+
+Probes of the new redaction found six cases it missed: lowercase `bearer`, JSON-quoted tokens,
+PEM keys, AWS key ids, e-mail addresses, and sensitive key variants such as `x-auth-token`. They
+were fixed in `19e73ab`, with regression tests. Phone numbers, names and generic high-entropy
+strings remain documented limitations.
+
+### Not done or not reproduced
+
+- GitHub Actions on these commits: see the CI run recorded after the push.
+- No independent audit has been performed; see
+  [`audit/phase-1-independent-audit-handoff.md`](audit/phase-1-independent-audit-handoff.md).
+- G-03 – G-08, S-02, D-010 – D-021, I-02 and I-03 await owner decisions; no approval was assumed.
