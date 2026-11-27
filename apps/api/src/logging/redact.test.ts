@@ -12,10 +12,23 @@ describe('redactString', () => {
     ['quoted secret', 'config secret: "very secret value"', 'very secret value'],
     ['api_key', 'call with api_key=AKIA0000 failed', 'AKIA0000'],
     ['access_token in query-like text', 'redirect ?access_token=tok123&x=1', 'tok123'],
+    // Found by the Phase 1 completion adversarial review:
+    ['lowercase bearer', 'auth bearer abc123secret', 'abc123secret'],
+    ['JSON-quoted token', '{"token":"tok_SECRET1"}', 'tok_SECRET1'],
+    [
+      'PEM private key',
+      '-----BEGIN PRIVATE KEY-----\nMIIEvQSECRET3\n-----END PRIVATE KEY-----',
+      'MIIEvQSECRET3',
+    ],
+    ['AWS access key id', 'key AKIAIOSFODNN7EXAMPLE used', 'AKIAIOSFODNN7EXAMPLE'],
   ])('redacts %s', (_label, input, secret) => {
     const out = redactString(input);
     expect(out).not.toContain(secret);
     expect(out).toContain(REDACTED);
+  });
+
+  it('redacts e-mail addresses (personal data)', () => {
+    expect(redactString('user jane.doe@example.com failed')).toBe('user [REDACTED_EMAIL] failed');
   });
 
   it('keeps harmless text unchanged', () => {
@@ -49,6 +62,40 @@ describe('redact (structured values)', () => {
     expect(out.name).toBe('Error');
     expect(out.message).not.toContain(':pw@');
     expect(out.stack).not.toContain(':pw@');
+  });
+
+  it('matches sensitive key variants by substring', () => {
+    expect(
+      redact({
+        'x-auth-token': 'a',
+        bearerToken: 'b',
+        dbPassword: 'c',
+        AUTHORIZATION: 'd',
+        status: 200,
+      }),
+    ).toEqual({
+      'x-auth-token': REDACTED,
+      bearerToken: REDACTED,
+      dbPassword: REDACTED,
+      AUTHORIZATION: REDACTED,
+      status: 200,
+    });
+  });
+
+  it('does not redact the fields the API itself logs', () => {
+    const entry = {
+      event: 'request',
+      method: 'GET',
+      path: '/health',
+      status: 200,
+      durationMs: 1.2,
+      requestId: 'abcdefgh',
+      code: 'NOT_FOUND',
+      context: 'HTTP',
+      level: 'info',
+      time: 't',
+    };
+    expect(redact(entry)).toEqual(entry);
   });
 
   it('does not mutate its input', () => {

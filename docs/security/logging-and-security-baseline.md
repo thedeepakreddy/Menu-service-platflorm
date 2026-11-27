@@ -39,14 +39,21 @@ address, and an `X-Forwarded-For` header, and asserts that none of them appears 
 **Redaction (defence in depth).** Every entry passes through `redact()`
 (`apps/api/src/logging/redact.ts`) before serialization:
 
-- Values of sensitive keys are replaced at any depth: `authorization`, `cookie`, `set-cookie`,
-  `password`, `secret`, `client_secret`, `token`, `access_token`, `refresh_token`, `id_token`,
-  `api_key`, `x-api-key`, `session`, `private_key`, `credentials` and variants.
-- Inside strings (messages and stack traces): `Bearer …` and `Basic …` credentials, JWTs,
-  `scheme://user:password@` URL credentials, and `password=` / `token:` / `api_key=`-style pairs.
+- Values of sensitive keys are replaced at any depth. Keys are matched case-insensitively **as
+  substrings**, so `authorization`, `cookie`, `passw…`, `pwd`, `passphrase`, `secret`, `token`,
+  `api_key`/`apikey`, `session`, `private_key`, `credential` and `signature` all match, including
+  variants such as `x-auth-token`, `bearerToken` and `dbPassword`. Over-redaction is accepted.
+- Inside strings (messages and stack traces):
+  - PEM private keys;
+  - `Bearer …` / `Basic …` credentials, in any letter case;
+  - JWTs;
+  - AWS access-key ids;
+  - `scheme://user:password@` URL credentials;
+  - `password=` / `token:` / JSON `"token":"…"` pairs;
+  - e-mail addresses, replaced with `[REDACTED_EMAIL]` because they are personal data.
 - Strings are capped at 4096 characters, and nesting at depth 6.
 
-Redaction is pattern-based and cannot recognise every possible secret. It does not replace the
+Redaction is pattern-based and cannot recognise every possible secret or personal datum. Verified not redacted: phone numbers, generic high-entropy strings without a recognisable key, and names. It does not replace the
 primary rule: **never pass secrets or personal data to the logger.**
 
 **Request correlation.** Every response carries `x-request-id` (P-108). A client-supplied id is
