@@ -174,3 +174,91 @@ In GitHub Actions they are listed under those IDs, which are no longer on the br
 trees are identical, run #1's result applies to the same code as `f383bc0`; this can be checked with
 `git rev-parse f383bc0^{tree}` → `3cdbc960…`. CI runs again on the rewritten branch head when it is
 pushed.
+
+## Phase 1 audit remediation (2026-11-27)
+
+**Authorization:** owner message "Phase 1 Remediation — Independent Audit Findings". This is
+recorded separately from the Phase 1 acceptance above, which is unchanged. **Status:**
+implemented and verified as below — **awaiting the owner's review and acceptance.** Phase 2
+remains **not authorized**.
+
+| Item               | Value                                                                                                                                   |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Audit              | PASS WITH CONDITIONS on `f383bc0`. Findings register: [`audit/phase-1-audit-findings.md`](audit/phase-1-audit-findings.md)              |
+| Starting commit    | `47559ad7b2cffcb86b92d56bb35697383f549c71`                                                                                              |
+| Remediation commit | `3343393e20d5c1d97749532cc77000d4dcc78654` (code, tests, fixtures, config, docs)                                                        |
+| Scope              | H-01, M-01, M-02, M-03, L-01, L-03, L-06, L-07, L-10; G-08 re-scoped; G-36 – G-41 added. No files under `apps/` or `packages/` changed. |
+| Decisions          | D-010 – D-015 (implemented, awaiting owner review; D-011's type-only scope is proposed)                                                 |
+
+### Clean-room verification of `3343393`
+
+A fresh clone of the commit was verified with an empty pnpm store (all 356 packages downloaded
+from the registry, 0 reused), an empty Corepack cache (pnpm 12.22.0 freshly downloaded and
+hash-checked), Node v24.22.3, `APP_ENV=test` and `TURBO_TELEMETRY_DISABLED=1`. Playwright used
+the browsers preinstalled in the container (Chromium v1243).
+
+| #   | Command                                              | Result                                                                                                |
+| --- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| 1   | `pnpm install --frozen-lockfile --store-dir <empty>` | exit 0                                                                                                |
+| 2   | `pnpm format:check`                                  | exit 0                                                                                                |
+| 3   | `pnpm lint`                                          | exit 0                                                                                                |
+| 4   | `pnpm typecheck`                                     | exit 0                                                                                                |
+| 5   | `pnpm test`                                          | exit 0: contracts 12, web 3, api 25, tests 58 (architecture 41, policy 12, startup 5) = **98 passed** |
+| 6   | `pnpm arch`                                          | exit 0: no violations (59 modules, 75 dependencies; before remediation 55 / 59)                       |
+| 7   | `pnpm build`                                         | exit 0                                                                                                |
+| 8   | `pnpm test:e2e`                                      | exit 0: **6 passed**                                                                                  |
+| 9   | `pnpm audit` / `pnpm audit --prod`                   | "No known vulnerabilities found" (both)                                                               |
+| 10  | API `node dist/main.js` without env                  | exit 1; `APP_ENV`, `API_HOST`, `API_PORT` "is required"                                               |
+| 11  | API with `APP_ENV=sk-live-SECRET`, `API_PORT=99999`  | exit 1; "invalid (invalid_value)", "invalid (too_big)"; the value is not printed                      |
+| 12  | `next build` without `APP_ENV`                       | exit 1; "APP_ENV is required"                                                                         |
+| 13  | `pnpm install --frozen-lockfile` on Node 22.23.5     | exit 1; `ERR_PNPM_UNSUPPORTED_ENGINE` (L-01)                                                          |
+| 14  | `git status` after all of the above                  | clean                                                                                                 |
+
+### Audit bypass probes re-run on the clean clone
+
+| Probe (audit)                                    | Before            | After                                                        |
+| ------------------------------------------------ | ----------------- | ------------------------------------------------------------ |
+| E1 web imports `apps/api/dist`                   | not reported      | `no-workspace-build-output-imports` + `no-cross-app-imports` |
+| E1b web imports `packages/contracts/dist`        | passed every gate | `no-workspace-build-output-imports`                          |
+| E4 API root file imports module internals        | not reported      | `api-module-entry-only`                                      |
+| E5 runtime code imports `vitest` (devDependency) | not reported      | `no-dev-deps-in-production-code`                             |
+| E10 contracts imports `node:http`                | not reported      | `contracts-allowlist`                                        |
+| E7 computed `require()` path                     | not reported      | still not reported: a static-analysis limit (L-04, open)     |
+
+### Architecture regression suite (`tests/architecture/boundaries.test.ts`, 41 tests)
+
+- **Inventory:** the configured rules, the fixture directories and the expectations must match
+  exactly (12 rules).
+- **For each of the 12 rules:** (a) the rule's fixture files are in the cruised graph; (b) every
+  violation belongs to that rule and comes from exactly the expected files; (c) with the rule
+  removed, the fixture produces no violations.
+- **Valid fixture:** all allowed patterns produce no violations, and every dependency resolves.
+- **Real repository:** no violations; the sources are cruised and the fixtures are not.
+- **Graph integrity (H-01):** named edges are present with their real types (`next`, `vitest`
+  npm-dev, `zod`, `@nestjs/common`, `@platform/contracts` → `dist` as a non-local import), and
+  no source edge is missing compared with an unexcluded baseline.
+
+**Mutation checks** (the config was changed temporarily and restored byte-identical afterwards):
+
+| Mutation                                                  | Result                                                                                                                                   |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Restore the original unanchored `dist/` exclusion (H-01)  | 7 tests fail (both graph-integrity tests, the valid fixture, and the contracts-allowlist, no-dev-deps, web-no-db and build-output rules) |
+| Weaken contracts-allowlist back to the framework denylist | 1 test fails (contracts-allowlist)                                                                                                       |
+| Delete `api-module-entry-only`                            | 1 test fails (inventory)                                                                                                                 |
+| Restrict the build-output rule to npm (non-local) imports | 1 test fails (build-output rule)                                                                                                         |
+| Lower `minimumReleaseAge` to 1440                         | supply-chain policy test fails                                                                                                           |
+
+### Corrections to earlier records
+
+- **L-10 (audit claim):** pnpm 12.22.0 does re-verify the lockfile against `minimumReleaseAge` on
+  `--frozen-lockfile` installs (reproduced: `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`). The audit
+  statement was incorrect; see D-015.
+- **L-01:** `engines` was not enforced at Phase 1 acceptance; it is now (D-013).
+- **L-03:** at acceptance, 7 of 9 rules had negative fixtures, not "each" rule. Now all 12 rules
+  have them.
+
+### Not done or not reproduced
+
+- GitHub Actions on the remediation commit: see the CI run recorded after the push.
+- L-02, L-04, L-05, L-08 and L-09 are open (out of scope). I-02 and I-03 await owner decisions.
+- M-04 and M-05 were recorded as Phase 2 prerequisites (G-38) and not implemented.
