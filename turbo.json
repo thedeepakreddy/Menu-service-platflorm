@@ -10,6 +10,10 @@
       "dependsOn": ["^build"],
       "env": ["APP_ENV"]
     },
+    "@platform/web#typecheck": {
+      "dependsOn": ["^build", "@platform/web#build"],
+      "env": ["APP_ENV"]
+    },
     "test": {
       "dependsOn": ["^build"],
       "env": ["APP_ENV"]

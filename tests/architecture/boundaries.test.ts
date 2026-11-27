@@ -249,6 +249,16 @@ describe('architecture CLI scope (audit N-02)', () => {
     expect(ci).toMatch(/^\s+run: pnpm arch\s*$/m);
   });
 
+  // CI run #10 failed on a race: `next typegen && tsc` (web typecheck) read
+  // .next/types while a concurrent `next build` rewrote it. Both tasks write
+  // .next, so the web typecheck must run after the web build.
+  it('the web typecheck is ordered after the web build (no concurrent .next writers)', () => {
+    const turbo = JSON.parse(readFileSync(`${repoRoot}turbo.json`, 'utf8')) as {
+      tasks: Record<string, { dependsOn?: string[] }>;
+    };
+    expect(turbo.tasks['@platform/web#typecheck']?.dependsOn).toContain('@platform/web#build');
+  });
+
   // Audit F-10: a gate that is run but whose failure is swallowed is not a gate.
   it('every required gate runs in CI and no CI step can swallow a failure', () => {
     const ci = readFileSync(`${repoRoot}.github/workflows/ci.yml`, 'utf8');
