@@ -1,5 +1,9 @@
 # Phase 1 Independent Audit Hand-off
 
+> **Status (2026-11-27):** the independent audit requested here was performed on `c788b0e`. Its
+> report is [`phase-1-independent-audit-report.md`](phase-1-independent-audit-report.md). This
+> hand-off is kept as written.
+
 **For:** an auditor who did **not** implement the work. Every review so far — the Phase 1 audit,
 the remediation audit and the residual-remediation audit — was a **self-audit** by the same Claude
 session that implemented the work. This hand-off asks for the independent review that Phase 1

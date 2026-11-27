@@ -11,39 +11,41 @@ until the owner approves it.
 
 ## Index
 
-| ID              | Title                                                                             | Status                                 | Date       |
-| --------------- | --------------------------------------------------------------------------------- | -------------------------------------- | ---------- |
-| [D-001](#d-001) | Document 05 is the authoritative execution roadmap                                | approved                               | 2026-11-27 |
-| [D-002](#d-002) | Phase sequencing authority and tracking of discrepancies                          | approved                               | 2026-11-27 |
-| [D-003](#d-003) | Specification placement and preservation                                          | approved                               | 2026-11-27 |
-| [P-101](#p-101) | pnpm workspaces + Turborepo                                                       | verified                               | 2026-11-27 |
-| [P-102](#p-102) | Node.js 24 LTS, pinned                                                            | verified                               | 2026-11-27 |
-| [P-103](#p-103) | Strict TypeScript from one shared base                                            | verified                               | 2026-11-27 |
-| [P-104](#p-104) | ESLint flat config + Prettier; dependency-cruiser boundaries                      | verified                               | 2026-11-27 |
-| [P-105](#p-105) | Vitest (unit/integration) + Playwright (e2e)                                      | verified                               | 2026-11-27 |
-| [P-106](#p-106) | GitHub Actions CI                                                                 | verified                               | 2026-11-27 |
-| [P-107](#p-107) | Zod-validated environment, fail fast, `.env.example` only                         | verified                               | 2026-11-27 |
-| [P-108](#p-108) | Initial API error envelope and request id convention                              | verified                               | 2026-11-27 |
-| [P-109](#p-109) | Create only `contracts` and `config` packages in Phase 1                          | verified                               | 2026-11-27 |
-| [P-110](#p-110) | `CLAUDE.md` operational guide                                                     | verified                               | 2026-11-27 |
-| [D-004](#d-004) | TypeScript pinned to 6.0.x (not 7.x)                                              | approved                               | 2026-11-27 |
-| [D-005](#d-005) | 7-day minimum release age for npm packages                                        | approved (provisional)                 | 2026-11-27 |
-| [D-006](#d-006) | `@playwright/test` pinned exactly to 1.63.0                                       | approved                               | 2026-11-27 |
-| [D-007](#d-007) | `no-extraneous-class` uses `allowWithDecorator` in `apps/api`                     | approved (scoped)                      | 2026-11-27 |
-| [D-008](#d-008) | `APP_ENV` required by every app and by build/typecheck/test                       | approved                               | 2026-11-27 |
-| [D-009](#d-009) | Web placeholder is marked `noindex`                                               | approved                               | 2026-11-27 |
-| [D-010](#d-010) | Boundary graph: build output followed-not-excluded; anchored exclusions           | implemented — awaiting owner review    | 2026-11-27 |
-| [D-011](#d-011) | `packages/contracts` dependency allowlist (zod only, incl. type-only)             | implemented — type-only scope proposed | 2026-11-27 |
-| [D-012](#d-012) | Web app must not import database clients or ORMs                                  | implemented — awaiting owner review    | 2026-11-27 |
-| [D-013](#d-013) | `engineStrict: true` enforces the Node.js engine range                            | implemented — awaiting owner review    | 2026-11-27 |
-| [D-014](#d-014) | `packageManager` pinned with a Corepack integrity hash                            | implemented — awaiting owner review    | 2026-11-27 |
-| [D-015](#d-015) | Automated supply-chain policy test                                                | implemented — awaiting owner review    | 2026-11-27 |
-| [D-016](#d-016) | Runtime code must not import test files (R-01)                                    | implemented — awaiting owner review    | 2026-11-27 |
-| [D-017](#d-017) | Boundary scan covers all of `tests/` (R-04)                                       | implemented — awaiting owner review    | 2026-11-27 |
-| [D-018](#d-018) | Per-command supply-chain overrides are rejected (R-06)                            | implemented — awaiting owner review    | 2026-11-27 |
-| [D-019](#d-019) | Security baseline: CORS default-deny allowlist; API/web security headers          | implemented — awaiting owner review    | 2026-11-27 |
-| [D-020](#d-020) | Structured JSON logging with redaction; controlled log levels                     | implemented — awaiting owner review    | 2026-11-27 |
-| [D-021](#d-021) | devDependency rule covers all workspace files (N-01); CLI scan-scope guard (N-02) | implemented — awaiting owner review    | 2026-11-27 |
+| ID              | Title                                                                             | Status                                  | Date       |
+| --------------- | --------------------------------------------------------------------------------- | --------------------------------------- | ---------- |
+| [D-001](#d-001) | Document 05 is the authoritative execution roadmap                                | approved                                | 2026-11-27 |
+| [D-002](#d-002) | Phase sequencing authority and tracking of discrepancies                          | approved                                | 2026-11-27 |
+| [D-003](#d-003) | Specification placement and preservation                                          | approved                                | 2026-11-27 |
+| [P-101](#p-101) | pnpm workspaces + Turborepo                                                       | verified                                | 2026-11-27 |
+| [P-102](#p-102) | Node.js 24 LTS, pinned                                                            | verified                                | 2026-11-27 |
+| [P-103](#p-103) | Strict TypeScript from one shared base                                            | verified                                | 2026-11-27 |
+| [P-104](#p-104) | ESLint flat config + Prettier; dependency-cruiser boundaries                      | verified                                | 2026-11-27 |
+| [P-105](#p-105) | Vitest (unit/integration) + Playwright (e2e)                                      | verified                                | 2026-11-27 |
+| [P-106](#p-106) | GitHub Actions CI                                                                 | verified                                | 2026-11-27 |
+| [P-107](#p-107) | Zod-validated environment, fail fast, `.env.example` only                         | verified                                | 2026-11-27 |
+| [P-108](#p-108) | Initial API error envelope and request id convention                              | verified                                | 2026-11-27 |
+| [P-109](#p-109) | Create only `contracts` and `config` packages in Phase 1                          | verified                                | 2026-11-27 |
+| [P-110](#p-110) | `CLAUDE.md` operational guide                                                     | verified                                | 2026-11-27 |
+| [D-004](#d-004) | TypeScript pinned to 6.0.x (not 7.x)                                              | approved                                | 2026-11-27 |
+| [D-005](#d-005) | 7-day minimum release age for npm packages                                        | approved (provisional)                  | 2026-11-27 |
+| [D-006](#d-006) | `@playwright/test` pinned exactly to 1.63.0                                       | approved                                | 2026-11-27 |
+| [D-007](#d-007) | `no-extraneous-class` uses `allowWithDecorator` in `apps/api`                     | approved (scoped)                       | 2026-11-27 |
+| [D-008](#d-008) | `APP_ENV` required by every app and by build/typecheck/test                       | approved                                | 2026-11-27 |
+| [D-009](#d-009) | Web placeholder is marked `noindex`                                               | approved                                | 2026-11-27 |
+| [D-010](#d-010) | Boundary graph: build output followed-not-excluded; anchored exclusions           | approved (2026-11-27)                   | 2026-11-27 |
+| [D-011](#d-011) | `packages/contracts` dependency allowlist (zod only, incl. type-only)             | approved — strict scope incl. type-only | 2026-11-27 |
+| [D-012](#d-012) | Web app must not import database clients or ORMs                                  | approved — interim denylist             | 2026-11-27 |
+| [D-013](#d-013) | `engineStrict: true` enforces the Node.js engine range                            | approved (2026-11-27)                   | 2026-11-27 |
+| [D-014](#d-014) | `packageManager` pinned with a Corepack integrity hash                            | approved (2026-11-27)                   | 2026-11-27 |
+| [D-015](#d-015) | Automated supply-chain policy test                                                | approved (2026-11-27)                   | 2026-11-27 |
+| [D-016](#d-016) | Runtime code must not import test files (R-01)                                    | approved (2026-11-27)                   | 2026-11-27 |
+| [D-017](#d-017) | Boundary scan covers all of `tests/` (R-04)                                       | approved (2026-11-27)                   | 2026-11-27 |
+| [D-018](#d-018) | Per-command supply-chain overrides are rejected (R-06)                            | approved — within documented limits     | 2026-11-27 |
+| [D-019](#d-019) | Security baseline: CORS default-deny allowlist; API/web security headers          | approved — amended for F-04             | 2026-11-27 |
+| [D-020](#d-020) | Structured JSON logging with redaction; controlled log levels                     | approved — amended for F-01, F-05, F-07 | 2026-11-27 |
+| [D-021](#d-021) | devDependency rule covers all workspace files (N-01); CLI scan-scope guard (N-02) | approved — amended for F-02, F-10       | 2026-11-27 |
+| [D-022](#d-022) | Doc 05 Phase 1 exit-gate conflict (§11 vs §13): interpretation                    | approved (owner amendment)              | 2026-11-27 |
+| [D-023](#d-023) | Commit author identity policy (I-03)                                              | approved (2026-11-27)                   | 2026-11-27 |
 
 ---
 
@@ -575,3 +577,133 @@ The observability stack (metrics, tracing, retention) is open (G-32).
   - every top-level exclusion alternative is anchored (H-01).
 
 **Rationale.** Audit findings N-01 and N-02.
+
+---
+
+## Independent-audit remediation and owner decision reconciliation (2026-11-27)
+
+**Authorization evidence:** Owner message "MASTER EXECUTION PROMPT — PHASE 1 REMEDIATION, FORMAL
+CLOSURE & PHASE 2 IMPLEMENTATION" (2026-11-27), Part VI. It approved D-010 – D-018 and D-005
+(retained), and approved D-019, D-020, D-021, S-02, I-02 and I-03 **conditionally**: each only
+once the named audit findings were remediated and verified. Part IV P1-R3 authorized the D-022
+interpretation. The independent audit itself is preserved in
+[`audit/phase-1-independent-audit-report.md`](audit/phase-1-independent-audit-report.md).
+
+| Decision             | Owner disposition (Part VI)                           | Condition                                          | Condition evidence                                                              |
+| -------------------- | ----------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------- |
+| D-010, D-013 – D-017 | Approve                                               | Verification supports the implementation           | Independent audit §G (all gates reproduced); this remediation's verification    |
+| D-011                | Approve the strict scope, type-only imports included  | Evidence confirms the behaviour                    | Audit probe: contracts `.spec.ts` importing `node:http` rejected; fixture suite |
+| D-012                | Approve as an interim control; not exhaustive         | —                                                  | Limits recorded in D-012, G-40, R-05                                            |
+| D-018                | Approve within its documented scope and limits        | —                                                  | Limits recorded in D-018; F-09 recorded below                                   |
+| D-019                | Approve after F-04 is reconciled and verified         | F-04 remediated                                    | D-019 amendment below; `tests/startup/web-runtime-headers.test.ts`              |
+| D-020                | Approve after F-01 is resolved and F-05 is documented | F-01 remediated; F-05 limits documented            | D-020 amendment below; `redact.test.ts`; security baseline §1                   |
+| D-021                | Approve after F-02 is resolved and verified           | F-02 remediated                                    | D-021 amendment below; `rules/no-undeclared-dependencies/` fixture              |
+| S-02                 | Approve after F-03 and F-06; open items stay open     | D-022 recorded; labels corrected; G-03 – G-08 open | S-02 v2 (`architecture/architecture-technical-specification-supplement.md`)     |
+| I-02                 | Accept the residual; delete no CI evidence            | Description verified                               | Audit §H: old commit not fetchable by git; Actions API still serves its message |
+| I-03                 | Choose a future author identity policy; no rewrite    | —                                                  | D-023                                                                           |
+| D-005                | Retain as provisional; review by Phase 10             | —                                                  | Unchanged                                                                       |
+
+The approvals take effect with the Phase 1 closure record in [`STATUS.md`](STATUS.md), which
+cites the commit and CI run on which the conditions were verified.
+
+### D-019 amendment (audit F-04)
+
+**Change.** Web HSTS is no longer part of the `next.config.ts` headers, which Next.js compiles
+into the build output. It is set per request by `apps/web/src/proxy.ts` from the runtime
+`APP_ENV` (staging and production only). Environment-independent headers stay in
+`next.config.ts`. **Reason.** A build made as `test` and started as `production` sent no HSTS,
+which conflicts with promoting one immutable artifact (Doc 01 §17). **Also recorded (F-13):**
+`Vary: Origin` is sent only to allowed origins; safe while every API response is `no-store`, and
+must be revisited with any cacheable response (G-37).
+
+### D-020 amendment (audit F-01, F-05, F-07)
+
+**F-01.** Redaction work is bounded and linear: strings are cut to `SCAN_LIMIT` (5120 characters)
+before any pattern runs; every pattern is anchored with a negative lookbehind and bounded;
+objects and arrays are capped at 100 entries per level; the request path is capped at 512
+characters at the source. **F-05.** Additional bounded patterns, and an honest list of what is
+not detected (security baseline §1); the earlier description overstated the `key=value`
+coverage. **F-07.** Caller fields cannot overwrite `time`, `level`, `context` or `fatal`; BigInt
+and Date are serialized deliberately; serialization cannot throw.
+
+### D-021 amendment (audit F-02, F-10)
+
+**F-02.** New rule `no-undeclared-dependencies`: every workspace file (apps, packages, tests; any
+import form) must declare each npm package it imports in its closest `package.json`
+(dependency-cruiser types such imports `npm-no-pkg` / `npm-unknown`). The original wording of
+D-021 ("no workspace file … imports devDependencies") was not true for root devDependencies that
+resolve through the hoisted root `node_modules`. A test now also requires every rule to have
+severity `error`, because `pnpm arch` exits 0 on warnings. **F-10.** The CLI-scope guard now
+also requires every gate to run in `ci.yml` and rejects `continue-on-error`, `|| true` and
+`if: false`/`always()`.
+
+**F-09 (recorded, not changed).** `engineStrict` and `minimumReleaseAge` are enforced by pnpm's
+effective configuration, so a developer can bypass them locally with environment variables such
+as `pnpm_config_engine_strict=false`. CI does not set such variables (D-018 checks workflows and
+scripts). Local enforcement against a deliberate override is out of scope.
+
+## D-022
+
+**Title:** Doc 05 Phase 1 exit-gate conflict: §11 vs §13
+**Status:** approved — owner amendment/interpretation, 2026-11-27
+**Approval evidence:** Owner message "MASTER EXECUTION PROMPT — PHASE 1 REMEDIATION, FORMAL
+CLOSURE & PHASE 2 IMPLEMENTATION", Part IV P1-R3: "Phase 1 is the foundation phase defined by
+§13, while tenant model and authentication boundary implementation are to be verified through
+the Phase 2 gate, provided this interpretation does not conflict with the original five
+specification documents."
+
+**The conflict (verified in the PDF; the PDF is unchanged).**
+
+- Doc 05 §11 (phase roadmap table), Phase 1 — Foundation: focus "Project conventions,
+  environments, tenant-aware skeleton, contracts, testing and security foundations"; exit gate
+  "Build/test gate; **tenant model and auth boundary verified**".
+- Doc 05 §13 (phase-specific work packages), Phase 1 — Foundations: "Establish or verify project
+  structure, type/validation standards, environments, API conventions, testing, logging, error
+  handling and security foundations … Exit: reproducible build/checks and foundation contracts."
+- Doc 05 §13 Phase 2 — Tenant and identity: "Define and verify tenant resolution and owner
+  account lifecycle, server-side tenant context, permissions, tenant-owned resource policies and
+  isolation tests … Exit: isolation/authentication/authorization negative tests."
+
+The §11 Phase 1 gate requires verifying a tenant model and an auth boundary that §13 assigns to
+Phase 2. The conflict was not recorded when Phase 1 was implemented: the implementation followed
+§13, and S-02 §3 wrongly stated that no contradiction existed (audit F-03).
+
+**Why Phase 1 followed §13.** §13 is the detailed work package; §11 summarizes. The decisions a
+tenant model and an auth boundary depend on (ORM, RLS strategy, identity provider, tenant
+resolution: G-03 – G-07) were owner-reserved "do not silently lock" items. Building them in
+Phase 1 would have meant implementing Phase 2 on assumed answers, which Doc 05 §2 and §8 forbid.
+
+**Decision.** Phase 1's exit gate is §13's: reproducible build/checks and foundation contracts,
+plus the security foundations. Verification of the tenant model and the authentication boundary
+moves to the **Phase 2 gate**, which already requires "isolation/authentication/authorization
+negative tests" (§11 and §13 agree on that). §11's "tenant-aware skeleton" is likewise delivered
+in Phase 2.
+
+**Consistency check.** No other document assigns tenant or auth verification to the foundation
+stage in a way this contradicts: Doc 01 §19 puts tenant identity, isolation enforcement and the
+database model in Phase B (after Phase A foundations); Doc 04 §26 Stage A groups auth with
+foundations but is a conceptual sequence governed by Doc 05 (D-001, D-002). The phase order is
+unchanged; no requirement is dropped; it moves to the next gate. This is recorded as an
+amendment under Doc 05 §17.
+
+## D-023
+
+**Title:** Commit author identity policy (I-03)
+**Status:** approved (2026-11-27)
+**Approval evidence:** Owner message (Part VI, I-03): "Choose and record an appropriate future
+commit author identity policy. Do not rewrite historical commits."
+
+**Decision.**
+
+- Commits produced by an AI implementation agent keep the agent's git identity as author and
+  committer (currently `Claude <noreply@anthropic.com>`). The git metadata then records honestly
+  which tool produced the change; it does not attribute machine-written code to a person.
+- Ownership and accountability are stated in every such commit message by the owner's
+  attribution line, `Built by Deepak, assisted by Claude.` (CLAUDE.md). No session links.
+- Commits the owner writes themselves use the owner's own git identity.
+- Historical commits are not rewritten (it would invalidate every recorded commit id and CI
+  reference). I-03 is closed by this policy.
+
+**Alternative considered.** Author = owner, committer = agent. Rejected as the default because it
+records the owner as having authored code they did not write; the owner can switch to it by
+configuring `user.name`/`user.email` for future sessions and recording a superseding decision.
