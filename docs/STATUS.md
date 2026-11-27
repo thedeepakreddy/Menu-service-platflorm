@@ -8,19 +8,19 @@ _Last updated: 2026-11-27_
 
 ## Phase ledger
 
-| Phase | Title                                    | Status                                                                                                                                                                                                                                                                                              | Gate evidence                                     |
-| ----- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| 0     | Reconnaissance & specification anchoring | verified — accepted by owner 2026-11-27                                                                                                                                                                                                                                                             | Commit `b963239`; baseline below                  |
-| 1     | Foundation                               | **CLOSURE VERIFICATION IN PROGRESS.** Accepted by owner 2026-11-27 (scaffold); independent audit of `c788b0e` PASS WITH CONDITIONS; conditions remediated and owner decisions reconciled 2026-11-27. Formal closure is recorded only with clean-room and CI evidence (see "Phase 1 formal closure") | See "Phase 1 independent-audit remediation"       |
-| 2     | Tenant & identity                        | not started. **Authorized by the owner (2026-11-27), conditional on the Phase 1 formal closure gate.** Phase 2 entry decisions G-03 – G-08 to be recorded first                                                                                                                                     | Phase 1 closure; [G-03–G-08, G-36, G-38](GAPS.md) |
-| 3     | Customer platform foundation             | not started                                                                                                                                                                                                                                                                                         | —                                                 |
-| 4     | Menu domain                              | not started                                                                                                                                                                                                                                                                                         | —                                                 |
-| 5     | Customer experience                      | not started                                                                                                                                                                                                                                                                                         | —                                                 |
-| 6     | Owner workspace                          | not started                                                                                                                                                                                                                                                                                         | —                                                 |
-| 7     | QR & promotions                          | not started                                                                                                                                                                                                                                                                                         | —                                                 |
-| 8     | Publishing & analytics                   | not started                                                                                                                                                                                                                                                                                         | —                                                 |
-| 9     | Progressive AI & integrations            | not started                                                                                                                                                                                                                                                                                         | —                                                 |
-| 10    | Release hardening                        | not started                                                                                                                                                                                                                                                                                         | —                                                 |
+| Phase | Title                                    | Status                                                                                                                                                                                | Gate evidence                                     |
+| ----- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| 0     | Reconnaissance & specification anchoring | verified — accepted by owner 2026-11-27                                                                                                                                               | Commit `b963239`; baseline below                  |
+| 1     | Foundation                               | **CLOSED** 2026-11-27. Closure verification commit `c917c43` (clean room + CI #11 success). Independent audit PASS WITH CONDITIONS; conditions remediated; owner decisions reconciled | See "Phase 1 formal closure"                      |
+| 2     | Tenant & identity                        | **authorized** (owner, 2026-11-27); Phase 1 gate satisfied. Starting with the G-03 – G-08 entry decisions                                                                             | Phase 1 closure; [G-03–G-08, G-36, G-38](GAPS.md) |
+| 3     | Customer platform foundation             | not started                                                                                                                                                                           | —                                                 |
+| 4     | Menu domain                              | not started                                                                                                                                                                           | —                                                 |
+| 5     | Customer experience                      | not started                                                                                                                                                                           | —                                                 |
+| 6     | Owner workspace                          | not started                                                                                                                                                                           | —                                                 |
+| 7     | QR & promotions                          | not started                                                                                                                                                                           | —                                                 |
+| 8     | Publishing & analytics                   | not started                                                                                                                                                                           | —                                                 |
+| 9     | Progressive AI & integrations            | not started                                                                                                                                                                           | —                                                 |
+| 10    | Release hardening                        | not started                                                                                                                                                                           | —                                                 |
 
 ## Phase 0 baseline (inspected 2026-11-27)
 
@@ -466,3 +466,65 @@ reconciliation". Residuals: [`audit/phase-1-audit-findings.md`](audit/phase-1-au
 API checks run in both projects but exercise the API, not the browser. The `pnpm build` step in
 CI is a Turborepo cache hit because `lint`/`typecheck` already built every package (`^build`);
 the build itself still runs and must succeed.
+
+## Phase 1 formal closure (2026-11-27)
+
+**Phase 1 — Foundation is CLOSED.** Closure verification commit:
+**`c917c435b58cd92014b85ef344adbda84ffff2c2`** on `claude/phase-1-audit-closure-x347eo`.
+This record is a documentation-only commit on top of it.
+
+### Closure gate (owner execution prompt, Part VII)
+
+| #   | Condition                              | Evidence                                                                                    |
+| --- | -------------------------------------- | ------------------------------------------------------------------------------------------- |
+| 1   | F-01 remediated and verified           | `fc1e157`; linearity tests; before/after probe (above)                                      |
+| 2   | F-02 remediated and verified           | `2f15e8f`; fixture; original bypass now fails `pnpm arch`                                   |
+| 3   | F-03 resolved and recorded             | [D-022](DECISIONS.md#d-022); S-02 §3                                                        |
+| 4   | D-019 reconciled and verified          | `3f8d21f`; `tests/startup/web-runtime-headers.test.ts`                                      |
+| 5   | D-020 reconciled and verified          | `fc1e157`; security baseline §1                                                             |
+| 6   | D-021 reconciled and verified          | `2f15e8f`, `1588494`                                                                        |
+| 7   | S-02 reconciled                        | S-02 v2 (labels, consistency review); G-03 – G-08 open                                      |
+| 8   | Governance records accurate            | `919542f` (STATUS, DECISIONS, GAPS, findings register, closure package)                     |
+| 9   | Verification gates pass                | Clean-room table below                                                                      |
+| 10  | CI passes for the closure commit       | CI #11 below                                                                                |
+| 11  | No unexplained CRITICAL/HIGH findings  | None open                                                                                   |
+| 12  | MEDIUM findings remediated or accepted | F-01, F-02 remediated; F-03 resolved                                                        |
+| 13  | Residual risks documented              | [`audit/phase-1-audit-findings.md`](audit/phase-1-audit-findings.md); GAPS G-41             |
+| 14  | Phase boundary intact                  | No tenant, identity, database, menu, owner or customer feature code; runtime deps unchanged |
+| 15  | Closure record cites exact evidence    | This section                                                                                |
+
+### Clean-room verification of `c917c43`
+
+Fresh clone, empty pnpm store (356 downloaded, 0 reused), empty Corepack cache (pnpm 12.22.0
+downloaded and hash-checked), Node v24.22.3, `APP_ENV=test`, `TURBO_TELEMETRY_DISABLED=1`.
+Playwright used the container's preinstalled Chromium 1243.
+
+| #   | Command                                                              | Result                                                 |
+| --- | -------------------------------------------------------------------- | ------------------------------------------------------ |
+| 1   | `pnpm install --frozen-lockfile --store-dir <empty>`                 | exit 0                                                 |
+| 2   | `pnpm format:check`, `pnpm lint`, `pnpm typecheck`                   | exit 0                                                 |
+| 3   | `pnpm test`                                                          | **238 passed**: contracts 12, web 9, api 125, tests 92 |
+| 4   | `pnpm arch`                                                          | no violations (80 modules, 132 dependencies)           |
+| 5   | `pnpm build`                                                         | exit 0                                                 |
+| 6   | `pnpm test:e2e`                                                      | **10 passed** (5 tests × 2 browser projects)           |
+| 7   | `pnpm audit`, `pnpm audit --prod`                                    | no known vulnerabilities                               |
+| 8   | Frozen install on Node 22.23.5 (`919542f`, same lockfile and config) | `ERR_PNPM_UNSUPPORTED_ENGINE`                          |
+| 9   | `git status` afterwards                                              | clean                                                  |
+
+Also verified during the remediation: the security and redaction probes (before/after table
+above), CORS and header behaviour (`security-baseline.test.ts`), runtime HSTS against the built
+web app, and every mutation listed above.
+
+### CI
+
+| Run                 | Commit    | Conclusion                                                                                                                |
+| ------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------- |
+| #10 (`45950197753`) | `919542f` | **failure** in Typecheck: a latent race between the web typecheck and the web build (see `c917c43`). Recorded, not hidden |
+| #11 (`45950544931`) | `c917c43` | **success**: all 14 steps passed, including typecheck, tests (incl. the runtime-HSTS startup test), arch and e2e          |
+
+### What closure does not mean
+
+Closure does not resolve G-03 – G-13 or any residual in the findings register. It does not
+certify complete redaction (pattern-based; limits in the security baseline §1) or any tenant
+isolation (none exists yet; it is the Phase 2 gate, D-022). Phase 2 is authorized by the owner,
+conditional on this gate; it starts with the G-03 – G-08 entry decisions.

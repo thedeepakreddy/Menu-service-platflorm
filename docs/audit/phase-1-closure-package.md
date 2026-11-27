@@ -5,7 +5,7 @@
 > (marked _corrected_). The audit ([`phase-1-independent-audit-report.md`](phase-1-independent-audit-report.md))
 > returned PASS WITH CONDITIONS; the conditions were remediated and the owner decisions in §2
 > were reconciled ([`../DECISIONS.md`](../DECISIONS.md), "Independent-audit remediation"). The
-> formal closure record and its evidence are in [`../STATUS.md`](../STATUS.md) → "Phase 1 formal
+> formal closure (Phase 1 **CLOSED**, verification commit `c917c43`, CI #11) and its evidence are in [`../STATUS.md`](../STATUS.md) → "Phase 1 formal
 > closure".
 
 **Prepared:** 2026-11-27, by the implementing Claude session. **Status:** closure-readiness
