@@ -675,3 +675,49 @@ remains conditional (D-032).
 provider takes effect at token expiry (D-033); in-database audit rows roll back with failed
 transactions, so the shipped log is the trail of record and log shipping does not exist yet
 (G-32); earlier LOW/INFO residuals (G-41).
+
+## Phase 2 audit remediation (2026-11-27)
+
+**Status: remediation complete — Phase 2 is a closure CANDIDATE for the owner's review. Phase 2
+is NOT closed.**
+
+- **Authorization:** owner message "Phase 2 Audit Remediation — Owner Authorization &
+  Controlled Engineering Execution".
+- **Report** (register, exit-gate matrix, review, verdict):
+  [`audit/phase-2-remediation-report.md`](audit/phase-2-remediation-report.md).
+- **Decisions:** D-034 – D-038. D-033 superseded.
+
+| Commit    | Content                                              | CI                                                                       |
+| --------- | ---------------------------------------------------- | ------------------------------------------------------------------------ |
+| `12fc987` | API and database remediation                         | (pushed with `bd5accb`)                                                  |
+| `2c759bf` | Web BFF, login abuse controls, browser e2e           | (pushed with `bd5accb`)                                                  |
+| `bd5accb` | Deterministic test ports                             | #22 failure (test assumption about the CI superuser, fixed in `8184813`) |
+| `8184813` | CI and mutation test fixes                           | #23 `46061170703` **success** (12 e2e incl. browser login)               |
+| `390060a` | Tenant cache/job boundary; D-034 – D-038             | #24 `46061587150` **success**                                            |
+| `88ef7b7` | Report, register, ledgers                            | #25 `46061906947` **success**                                            |
+| `c5ece6d` | Fixes from the independent review (R2-02 and others) | #26 `46063450813` **success**                                            |
+
+### Final verification (clean clone of `c5ece6d`, Node 24.22.3, PostgreSQL 16.15)
+
+| Command                            | Result                                                         |
+| ---------------------------------- | -------------------------------------------------------------- |
+| `pnpm install --frozen-lockfile`   | ok                                                             |
+| `pnpm format:check`                | pass                                                           |
+| `pnpm lint`                        | pass (0 warnings)                                              |
+| `pnpm typecheck`                   | pass                                                           |
+| `pnpm test`                        | 393 passed (contracts 31, web 54, api 215, tests 93)           |
+| `pnpm arch`                        | 0 violations (153 modules, 430 dependencies)                   |
+| `pnpm build`                       | pass                                                           |
+| `pnpm test:db`                     | 167 passed (real PostgreSQL)                                   |
+| `pnpm test:e2e`                    | 12 passed (incl. browser login on desktop and mobile Chromium) |
+| `pnpm audit` / `pnpm audit --prod` | no known vulnerabilities                                       |
+| Specification PDFs                 | unchanged since `4656ab3` (`git diff` empty)                   |
+| Audit report copy                  | SHA-256 `5a9102f8…2651`, unchanged                             |
+
+**Mutation checks:** 17 run. 16 caught; M-15 is equivalent (report §17).
+
+**Independent review:** PASS WITH CONDITIONS. Its two Phase 2 blockers, R2-02 and R2-17, are
+resolved (report §24).
+
+**Proposed verdict:** **PASS WITH CONDITIONS.** Awaiting the owner's acceptance of residual
+risks R-01 – R-08. Pre-production blockers PP-01 – PP-11 stay open.
