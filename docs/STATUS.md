@@ -117,6 +117,13 @@ The same cases are automated in `tests/startup/env-rejection.test.ts`.
   false; the claim was removed and `apps/api/src/di.test.ts` now guards the behaviour.
 - Lint relaxations were removed in favour of code fixes (see D-007).
 
-### CI
+### CI (GitHub Actions)
 
-Recorded after the push. See the GitHub Actions run for commit-level evidence.
+| Item                 | Value                                                                                                                                                                                                                                                                          |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Run                  | CI #1, run id `45929039778`, job `140277112902` (`ubuntu-latest`)                                                                                                                                                                                                              |
+| Commit               | `e0fd9eb43863dd25c816290b079ca16af550b104` on `claude/new-session-7xxuoq`                                                                                                                                                                                                      |
+| Conclusion           | **success** (started 2026-11-27T02:33:36Z, completed 02:34:38Z)                                                                                                                                                                                                                |
+| Toolchain (from log) | Node v24.22.3, pnpm 12.22.0; "Lockfile is up to date" with `--frozen-lockfile`                                                                                                                                                                                                 |
+| Steps                | install, format, lint, typecheck, test (contracts 12, web 3, api 25, tests 14), arch (55 modules, 59 dependencies, no violations), build, Playwright Chromium install (v1243, matching D-006), e2e **6 passed**. The upload-report step was skipped (it runs only on failure). |
+| Note                 | The Build step was a Turborepo cache hit, because typecheck had already built all packages earlier in the same job (`^build` dependency). The build itself ran and succeeded inside the typecheck step.                                                                        |
