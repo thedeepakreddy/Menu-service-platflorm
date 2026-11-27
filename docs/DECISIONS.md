@@ -11,51 +11,56 @@ until the owner approves it.
 
 ## Index
 
-| ID              | Title                                                                             | Status                                  | Date       |
-| --------------- | --------------------------------------------------------------------------------- | --------------------------------------- | ---------- |
-| [D-001](#d-001) | Document 05 is the authoritative execution roadmap                                | approved                                | 2026-11-27 |
-| [D-002](#d-002) | Phase sequencing authority and tracking of discrepancies                          | approved                                | 2026-11-27 |
-| [D-003](#d-003) | Specification placement and preservation                                          | approved                                | 2026-11-27 |
-| [P-101](#p-101) | pnpm workspaces + Turborepo                                                       | verified                                | 2026-11-27 |
-| [P-102](#p-102) | Node.js 24 LTS, pinned                                                            | verified                                | 2026-11-27 |
-| [P-103](#p-103) | Strict TypeScript from one shared base                                            | verified                                | 2026-11-27 |
-| [P-104](#p-104) | ESLint flat config + Prettier; dependency-cruiser boundaries                      | verified                                | 2026-11-27 |
-| [P-105](#p-105) | Vitest (unit/integration) + Playwright (e2e)                                      | verified                                | 2026-11-27 |
-| [P-106](#p-106) | GitHub Actions CI                                                                 | verified                                | 2026-11-27 |
-| [P-107](#p-107) | Zod-validated environment, fail fast, `.env.example` only                         | verified                                | 2026-11-27 |
-| [P-108](#p-108) | Initial API error envelope and request id convention                              | verified                                | 2026-11-27 |
-| [P-109](#p-109) | Create only `contracts` and `config` packages in Phase 1                          | verified                                | 2026-11-27 |
-| [P-110](#p-110) | `CLAUDE.md` operational guide                                                     | verified                                | 2026-11-27 |
-| [D-004](#d-004) | TypeScript pinned to 6.0.x (not 7.x)                                              | approved                                | 2026-11-27 |
-| [D-005](#d-005) | 7-day minimum release age for npm packages                                        | approved (provisional)                  | 2026-11-27 |
-| [D-006](#d-006) | `@playwright/test` pinned exactly to 1.63.0                                       | approved                                | 2026-11-27 |
-| [D-007](#d-007) | `no-extraneous-class` uses `allowWithDecorator` in `apps/api`                     | approved (scoped)                       | 2026-11-27 |
-| [D-008](#d-008) | `APP_ENV` required by every app and by build/typecheck/test                       | approved                                | 2026-11-27 |
-| [D-009](#d-009) | Web placeholder is marked `noindex`                                               | approved                                | 2026-11-27 |
-| [D-010](#d-010) | Boundary graph: build output followed-not-excluded; anchored exclusions           | approved (2026-11-27)                   | 2026-11-27 |
-| [D-011](#d-011) | `packages/contracts` dependency allowlist (zod only, incl. type-only)             | approved — strict scope incl. type-only | 2026-11-27 |
-| [D-012](#d-012) | Web app must not import database clients or ORMs                                  | approved — interim denylist             | 2026-11-27 |
-| [D-013](#d-013) | `engineStrict: true` enforces the Node.js engine range                            | approved (2026-11-27)                   | 2026-11-27 |
-| [D-014](#d-014) | `packageManager` pinned with a Corepack integrity hash                            | approved (2026-11-27)                   | 2026-11-27 |
-| [D-015](#d-015) | Automated supply-chain policy test                                                | approved (2026-11-27)                   | 2026-11-27 |
-| [D-016](#d-016) | Runtime code must not import test files (R-01)                                    | approved (2026-11-27)                   | 2026-11-27 |
-| [D-017](#d-017) | Boundary scan covers all of `tests/` (R-04)                                       | approved (2026-11-27)                   | 2026-11-27 |
-| [D-018](#d-018) | Per-command supply-chain overrides are rejected (R-06)                            | approved — within documented limits     | 2026-11-27 |
-| [D-019](#d-019) | Security baseline: CORS default-deny allowlist; API/web security headers          | approved — amended for F-04             | 2026-11-27 |
-| [D-020](#d-020) | Structured JSON logging with redaction; controlled log levels                     | approved — amended for F-01, F-05, F-07 | 2026-11-27 |
-| [D-021](#d-021) | devDependency rule covers all workspace files (N-01); CLI scan-scope guard (N-02) | approved — amended for F-02, F-10       | 2026-11-27 |
-| [D-022](#d-022) | Doc 05 Phase 1 exit-gate conflict (§11 vs §13): interpretation                    | approved (owner amendment)              | 2026-11-27 |
-| [D-023](#d-023) | Commit author identity policy (I-03)                                              | approved (2026-11-27)                   | 2026-11-27 |
-| [D-024](#d-024) | G-03: Kysely on node-postgres; plain-SQL forward-only migrations                  | approved (delegated, Part IX)           | 2026-11-27 |
-| [D-025](#d-025) | G-04: OIDC identity architecture behind a provider port                           | architecture approved; **vendor open**  | 2026-11-27 |
-| [D-026](#d-026) | G-05: account recovery delegated to the identity provider                         | approved (delegated, Part IX)           | 2026-11-27 |
-| [D-027](#d-027) | G-06: tenant resolution and server-side tenant context                            | approved (delegated, Part IX)           | 2026-11-27 |
-| [D-028](#d-028) | G-07: PostgreSQL RLS isolation model, roles and operator access                   | approved (delegated, Part IX)           | 2026-11-27 |
-| [D-029](#d-029) | G-08: runtime secrets management                                                  | approved (delegated, Part IX)           | 2026-11-27 |
-| [D-030](#d-030) | G-36: sessions via a server-side web BFF; CORS stays credential-free              | approved (delegated, Part IX)           | 2026-11-27 |
-| [D-031](#d-031) | G-34/G-38: rate limiting and request-cost controls                                | approved (delegated, Part IX)           | 2026-11-27 |
-| [D-032](#d-032) | Identity provider: ZITADEL Cloud (EU) — validation and implementation direction   | approved (owner) — **conditional**      | 2026-11-27 |
-| [D-033](#d-033) | M2.6 web login: BFF session design and operator MFA evidence                      | approved (delegated)                    | 2026-11-27 |
+| ID              | Title                                                                             | Status                                                  | Date       |
+| --------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------- | ---------- |
+| [D-001](#d-001) | Document 05 is the authoritative execution roadmap                                | approved                                                | 2026-11-27 |
+| [D-002](#d-002) | Phase sequencing authority and tracking of discrepancies                          | approved                                                | 2026-11-27 |
+| [D-003](#d-003) | Specification placement and preservation                                          | approved                                                | 2026-11-27 |
+| [P-101](#p-101) | pnpm workspaces + Turborepo                                                       | verified                                                | 2026-11-27 |
+| [P-102](#p-102) | Node.js 24 LTS, pinned                                                            | verified                                                | 2026-11-27 |
+| [P-103](#p-103) | Strict TypeScript from one shared base                                            | verified                                                | 2026-11-27 |
+| [P-104](#p-104) | ESLint flat config + Prettier; dependency-cruiser boundaries                      | verified                                                | 2026-11-27 |
+| [P-105](#p-105) | Vitest (unit/integration) + Playwright (e2e)                                      | verified                                                | 2026-11-27 |
+| [P-106](#p-106) | GitHub Actions CI                                                                 | verified                                                | 2026-11-27 |
+| [P-107](#p-107) | Zod-validated environment, fail fast, `.env.example` only                         | verified                                                | 2026-11-27 |
+| [P-108](#p-108) | Initial API error envelope and request id convention                              | verified                                                | 2026-11-27 |
+| [P-109](#p-109) | Create only `contracts` and `config` packages in Phase 1                          | verified                                                | 2026-11-27 |
+| [P-110](#p-110) | `CLAUDE.md` operational guide                                                     | verified                                                | 2026-11-27 |
+| [D-004](#d-004) | TypeScript pinned to 6.0.x (not 7.x)                                              | approved                                                | 2026-11-27 |
+| [D-005](#d-005) | 7-day minimum release age for npm packages                                        | approved (provisional)                                  | 2026-11-27 |
+| [D-006](#d-006) | `@playwright/test` pinned exactly to 1.63.0                                       | approved                                                | 2026-11-27 |
+| [D-007](#d-007) | `no-extraneous-class` uses `allowWithDecorator` in `apps/api`                     | approved (scoped)                                       | 2026-11-27 |
+| [D-008](#d-008) | `APP_ENV` required by every app and by build/typecheck/test                       | approved                                                | 2026-11-27 |
+| [D-009](#d-009) | Web placeholder is marked `noindex`                                               | approved                                                | 2026-11-27 |
+| [D-010](#d-010) | Boundary graph: build output followed-not-excluded; anchored exclusions           | approved (2026-11-27)                                   | 2026-11-27 |
+| [D-011](#d-011) | `packages/contracts` dependency allowlist (zod only, incl. type-only)             | approved — strict scope incl. type-only                 | 2026-11-27 |
+| [D-012](#d-012) | Web app must not import database clients or ORMs                                  | approved — interim denylist                             | 2026-11-27 |
+| [D-013](#d-013) | `engineStrict: true` enforces the Node.js engine range                            | approved (2026-11-27)                                   | 2026-11-27 |
+| [D-014](#d-014) | `packageManager` pinned with a Corepack integrity hash                            | approved (2026-11-27)                                   | 2026-11-27 |
+| [D-015](#d-015) | Automated supply-chain policy test                                                | approved (2026-11-27)                                   | 2026-11-27 |
+| [D-016](#d-016) | Runtime code must not import test files (R-01)                                    | approved (2026-11-27)                                   | 2026-11-27 |
+| [D-017](#d-017) | Boundary scan covers all of `tests/` (R-04)                                       | approved (2026-11-27)                                   | 2026-11-27 |
+| [D-018](#d-018) | Per-command supply-chain overrides are rejected (R-06)                            | approved — within documented limits                     | 2026-11-27 |
+| [D-019](#d-019) | Security baseline: CORS default-deny allowlist; API/web security headers          | approved — amended for F-04                             | 2026-11-27 |
+| [D-020](#d-020) | Structured JSON logging with redaction; controlled log levels                     | approved — amended for F-01, F-05, F-07                 | 2026-11-27 |
+| [D-021](#d-021) | devDependency rule covers all workspace files (N-01); CLI scan-scope guard (N-02) | approved — amended for F-02, F-10                       | 2026-11-27 |
+| [D-022](#d-022) | Doc 05 Phase 1 exit-gate conflict (§11 vs §13): interpretation                    | approved (owner amendment)                              | 2026-11-27 |
+| [D-023](#d-023) | Commit author identity policy (I-03)                                              | approved (2026-11-27)                                   | 2026-11-27 |
+| [D-024](#d-024) | G-03: Kysely on node-postgres; plain-SQL forward-only migrations                  | approved (delegated, Part IX)                           | 2026-11-27 |
+| [D-025](#d-025) | G-04: OIDC identity architecture behind a provider port                           | approved; vendor D-032; bearer path superseded by D-034 | 2026-11-27 |
+| [D-026](#d-026) | G-05: account recovery delegated to the identity provider                         | approved (delegated, Part IX)                           | 2026-11-27 |
+| [D-027](#d-027) | G-06: tenant resolution and server-side tenant context                            | approved (delegated, Part IX)                           | 2026-11-27 |
+| [D-028](#d-028) | G-07: PostgreSQL RLS isolation model, roles and operator access                   | approved — amended by D-035                             | 2026-11-27 |
+| [D-029](#d-029) | G-08: runtime secrets management                                                  | approved (delegated, Part IX)                           | 2026-11-27 |
+| [D-030](#d-030) | G-36: sessions via a server-side web BFF; CORS stays credential-free              | approved — session store refined by D-034               | 2026-11-27 |
+| [D-031](#d-031) | G-34/G-38: rate limiting and request-cost controls                                | approved — amended by D-037                             | 2026-11-27 |
+| [D-032](#d-032) | Identity provider: ZITADEL Cloud (EU) — validation and implementation direction   | approved (owner) — **conditional**                      | 2026-11-27 |
+| [D-033](#d-033) | M2.6 web login: BFF session design and operator MFA evidence                      | **superseded** by D-034                                 | 2026-11-27 |
+| [D-034](#d-034) | Revocable server-side sessions; login-time token verification; operator MFA       | approved (owner E-03) — implemented                     | 2026-11-27 |
+| [D-035](#d-035) | Definer role, no owner row access, restrictive backstops, startup role allowlist  | approved (owner remediation) — implemented              | 2026-11-27 |
+| [D-036](#d-036) | Owner account lifecycle and the active-tenant ownership invariant                 | approved (owner E-01) — implemented                     | 2026-11-27 |
+| [D-037](#d-037) | Rate limiting: pre-parse middleware, shared group budgets, trusted-proxy model    | approved (owner remediation) — implemented              | 2026-11-27 |
+| [D-038](#d-038) | Web login abuse controls                                                          | approved (owner C-03) — implemented                     | 2026-11-27 |
 
 ---
 
@@ -764,8 +769,11 @@ specification", so this is a recorded architecture decision, not a deviation fro
 ## D-025
 
 **Title:** G-04 — identity: OpenID Connect architecture behind a provider port
-**Status:** architecture **approved** (delegated, Part IX); **identity-provider vendor: OPEN —
-owner decision required** (materially new vendor commitment, Part XII)
+**Status:** architecture **approved** (delegated, Part IX). Vendor: D-032. **Amended by
+[D-034](#d-034):** the API no longer accepts `Authorization: Bearer <JWT>` on owner or operator
+routes. Identity tokens are verified once, at login, and requests carry a server-side session.
+The rest of this entry (OIDC, PKCE, separate trust domains, `(issuer, subject)` mapping,
+`jose`, asymmetric algorithms only) stands.
 **Decision (architecture).**
 
 - Owners and platform operators authenticate with an external **OpenID Connect** provider using
@@ -830,7 +838,9 @@ exists, and recovery events received from the provider are logged without secret
 ## D-028
 
 **Title:** G-07 — PostgreSQL row-level security isolation model, roles and operator access
-**Status:** approved (delegated, Part IX), 2026-11-27
+**Status:** approved (delegated, Part IX), 2026-11-27. **Amended by [D-035](#d-035):**
+`SECURITY DEFINER` functions are owned by `app_definer`, not `app_owner`. Operator functions
+derive the operator from a session and no longer take an operator id.
 **Evidence:** spike (D-024), re-proved by `pnpm test:db` in the repository.
 **Decision.**
 
@@ -882,7 +892,9 @@ exists, and recovery events received from the provider are logged without secret
 ## D-030
 
 **Title:** G-36 — sessions through a server-side web BFF; API CORS stays credential-free
-**Status:** approved (delegated, Part IX), 2026-11-27
+**Status:** approved (delegated, Part IX), 2026-11-27. **Refined by [D-034](#d-034):** the
+session is stored server-side in PostgreSQL. The cookie holds only an opaque token, not an
+encrypted session. CORS stays credential-free.
 **Decision.**
 
 - The browser never holds identity tokens. The Next.js server (`apps/web`) acts as a
@@ -916,6 +928,11 @@ exists, and recovery events received from the provider are logged without secret
   proxy is explicitly configured; `X-Forwarded-For` is not trusted by default.
 - Credential-guessing protection for login itself is the identity provider's responsibility
   (D-025, D-026).
+
+**Amended by [D-037](#d-037) (2026-11-27).** The table below describes the M2.5 implementation.
+Its budgets were in fact per controller, not per group (audit D-01: operator 60/min, not 30). D-037
+restores the approved per-group budgets and replaces the guard with middleware. The limits
+themselves are unchanged.
 
 **Implementation (M2.5, 2026-11-27).** `apps/api/src/infrastructure/rate-limit/`:
 
@@ -988,7 +1005,10 @@ a service; self-hosting a modified version would trigger AGPL obligations.
 ## D-033
 
 **Title:** M2.6 web login — BFF session design and operator MFA evidence
-**Status:** approved (delegated, Part IX; refines D-025 and D-030), 2026-11-27
+**Status:** **superseded by [D-034](#d-034)** (2026-11-27). Was: approved (delegated, Part IX;
+refines D-025 and D-030). Kept unchanged below as history. The independent audit showed its
+operator proof could be satisfied by one ID token (C-01) and was not bound to the access token
+(C-02), and the owner ruled that sessions must be revocable and server-side (E-03).
 
 **Operator MFA evidence (amends D-025).** ZITADEL carries `amr` only in the ID token. The API
 therefore accepts an operator request only with **both**:
@@ -1024,3 +1044,270 @@ database access (D-012) and a store would need new infrastructure.
   public origin, never from request headers.
 - Library: `openid-client` 6.x (MIT, certified OpenID RP library by the `jose` author) instead of a
   hand-written protocol implementation.
+
+---
+
+## Phase 2 audit remediation decisions (D-034 – D-038)
+
+**Authorization evidence:** owner message "Phase 2 Audit Remediation — Owner Authorization &
+Controlled Engineering Execution" (2026-11-27). It contains two binding owner decisions:
+
+- **E-01:** "Implement the owner account lifecycle now. Do not defer it."
+- **E-03:** "Require revocable server-side sessions … Prefer a PostgreSQL-backed server-side
+  session store".
+
+It also requires C-01, C-02, A-01, D-01 and B-01 to be remediated, and authorizes C-03, A-02 –
+A-05, B-02 – B-04 and the rate-limit topology work.
+
+The technical designs below were made by the implementation agent under that authorization. Each
+records its evidence. The source audit is
+[`audit/phase-2-independent-audit-report.md`](audit/phase-2-independent-audit-report.md); the
+plan is [`architecture/phase-2-remediation-plan.md`](architecture/phase-2-remediation-plan.md).
+
+## D-034
+
+**Title:** Revocable server-side sessions; identity tokens verified once at login; operator MFA
+as a session property
+**Status:** approved (owner decision E-03; design delegated) — implemented, 2026-11-27.
+Supersedes D-033 and amends D-025 and D-030.
+**Evidence:**
+
+- [`architecture/spikes/zitadel-token-contract.md`](architecture/spikes/zitadel-token-contract.md),
+  confirmed against ZITADEL source code. With ZITADEL's defaults, an ID token's `aud` contains
+  the project id, which is the API audience. This is why C-01 was real.
+- Tests: `apps/api/src/modules/identity/login-verifier.test.ts` (28) and
+  `sessions.db.test.ts` (25).
+- Browser e2e: `tests/e2e/login.spec.ts`.
+
+**Decision.**
+
+1. **Login.** The web BFF runs the OIDC code flow (PKCE S256, state, nonce, `max_age` for
+   operators). It then sends the ID token and the access token **once**, server to server, to
+   `POST /auth/sessions` with the BFF credential. It keeps neither token. The API verifies
+   `login-verifier.ts`:
+   - **ID token:** `iss`; `aud` contains the web client; `azp` = the web client; `nonce` present;
+     `iat` no more than 300 s old; `at_hash` = hash of **this** access token.
+   - **Access token:** a JWT (opaque tokens are refused); same `iss` and `sub`; `aud` contains
+     the API audience; `client_id` (or `azp`) = the web client; **no** `nonce`, `at_hash`,
+     `auth_time` or `amr`; not the same string as the ID token.
+   - **Both:** RS256/ES256 only; size ≤ 8 KB; 30 s clock skew.
+   - **Operators:** `amr` contains `mfa`, and `auth_time` is no older than
+     `API_OPERATOR_MFA_MAX_AGE_SECONDS` (≤ 3600).
+2. **Replay.** The SHA-256 of each ID token is recorded in `app.consumed_id_tokens`. An ID token
+   can create one session, ever.
+3. **Session store (PostgreSQL, `app.sessions`).**
+   - The token is 256 bits from the CSPRNG. Only its SHA-256 is stored.
+   - The session is bound to an account of one kind, and records MFA, `auth_time`, client and
+     the provider's `sid`.
+   - **Absolute expiry:** owners at most 8 h; operators at most 1 h and at most `auth_time` +
+     the MFA maximum age; never later than the access token. The database enforces the same
+     ceilings with its own clock (CHECK constraints plus `least()` in `session_create`).
+   - **Idle expiry** is renewed on use (at most every 30 s), never past the absolute expiry.
+     Defaults are owners 1800 s and operators 900 s, both configurable. These are technical
+     defaults, not specification requirements; the owner may change them.
+   - An operator session without MFA cannot exist (CHECK `sessions_operator_mfa`).
+4. **Every authenticated request.**
+   - Owner and operator routes accept only `Authorization: Session <token>` **and** the BFF
+     credential.
+   - Each must appear exactly once (duplicates are counted from the raw headers) and in an exact
+     format.
+   - The session is validated in the database on every request, so revocation is immediate and
+     consistent across API instances.
+   - `Authorization: Bearer` and `X-Authentication-Proof` are no longer accepted anywhere.
+5. **Revocation.**
+   - Logout.
+   - Rotation: a new login revokes the browser's previous session (session-fixation
+     protection).
+   - Account deactivation, identity unlink and link.
+   - Ownership transfer: both the old and the new owner.
+   - Owner membership revocation.
+   - Tenant suspension and retirement (that tenant's owner).
+6. **Cookie.** `__Host-platform-session=<kind>.<token>`: Secure, HttpOnly, SameSite=Lax, Path=/,
+   host-only; Max-Age = the absolute expiry. Browser JavaScript can read nothing. The only
+   other cookie is the sealed 10-minute login transaction (JWE dir/A256GCM, key =
+   `WEB_SESSION_SECRET`, exactly 32 bytes).
+7. **Logout** revokes the session at the API first, then ends the provider session with
+   `client_id` and `post_logout_redirect_uri`. No ID token appears in the URL (C-06).
+
+**MFA semantics.** "MFA" means the identity provider's ID token asserts `amr` ∋ `mfa`. With
+ZITADEL that means two or more factors were verified, according to its code. The API checks this
+once, at login. The session's absolute expiry is bounded by `auth_time` + the maximum age, so MFA
+freshness holds for the session's whole life.
+
+**Verified vs assumed.** The ZITADEL token shapes are confirmed in ZITADEL's source code, not on
+a live ZITADEL Cloud tenant (pre-production item PP-03). Tests use a local issuer that mimics
+those shapes.
+
+**Limitations.**
+
+- The BFF credential is a shared static secret. Rotating it requires restarting both apps;
+  mTLS or a signed client assertion would be stronger.
+- The database trusts the API's token verification: anyone holding the `app_runtime` credential
+  can call `session_create` for an existing account. Acting as an operator additionally
+  requires the `app_operator` credential (see D-035).
+- The provider-side SSO session can outlive a local revocation until its own expiry. Back-channel
+  logout is supported by ZITADEL but not implemented (pre-production item PP-07).
+
+## D-035
+
+**Title:** Database privilege model: definer role, no owner row access, restrictive backstops,
+function defaults, append-only audit, startup allowlist, migration identity
+**Status:** approved (owner remediation authorization; design delegated) — implemented,
+2026-11-27. Amends D-028.
+**Evidence:**
+
+- `apps/api/migrations/0005_definer_role_and_hardening.sql` and `0006_*.sql`.
+- Tests: `catalog.db.test.ts` (16), `role-check.db.test.ts` (22) and `migrate.db.test.ts` (14).
+- Mutation checks M-05 to M-10 (STATUS.md).
+
+**Decision.**
+
+- **`app_definer`** is a new role: NOLOGIN, NOINHERIT, not a superuser, no BYPASSRLS. It is
+  created by environment provisioning, like the other roles.
+  - It owns every `SECURITY DEFINER` function.
+  - It holds the only cross-tenant policies, one per command its functions need: no `DELETE` on
+    tenant data, and only `SELECT`/`INSERT` on the audit table.
+  - Only `app_owner` is a member, `WITH INHERIT FALSE, SET TRUE`, which is needed to hand over
+    function ownership.
+- **`app_owner`** (migrations) keeps DDL authority but has **no row policy**. Under `FORCE` it
+  reads and writes no rows, so a view it creates leaks nothing (A-02).
+- **Restrictive** tenant policies on `tenants` and `memberships` for `app_runtime` and
+  `app_operator`: an extra permissive policy can never widen runtime access (A-03).
+- **`ALTER DEFAULT PRIVILEGES FOR ROLE app_owner REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC`**
+  (A-04).
+- **Audit trail.** `operator_audit` refuses UPDATE, DELETE and TRUNCATE by trigger, even for a
+  superuser. The owner's own privileges for them are revoked (B-04). Audit rows record the
+  operator **account** and **session** derived inside the database (B-03), a unique
+  `operation_id` (B-02), the target account and details.
+- **Catalog test** (`catalog.db.test.ts`). The CI test fails on any:
+  - table without ENABLE+FORCE RLS;
+  - view without `security_invoker`;
+  - materialized or foreign relation;
+  - policy for another role;
+  - runtime policy whose expression is not exactly the canonical tenant expression;
+  - missing restrictive backstop;
+  - function executable by PUBLIC or by a role outside its reviewed grant list;
+  - `SECURITY DEFINER` function not owned by `app_definer` or without the pinned `search_path`;
+  - function body calling `set_config`/`SET ROLE`;
+  - missing default-privilege revoke;
+  - mutable audit;
+  - membership of `app_definer` other than `app_owner`.
+- **Startup role check** (`assertSafeRuntimeRole(db, 'runtime' | 'operator')`, fail-closed). It
+  is structural, not a name comparison. It refuses:
+  - superuser, BYPASSRLS, CREATEROLE, CREATEDB, REPLICATION;
+  - **any** role membership, direct or indirect (`pg_auth_members`, `pg_has_role(… 'MEMBER')`);
+  - ownership of any non-system object or of the database;
+  - database CREATE/TEMP; CREATE on any schema;
+  - a preset `app.tenant_id`, or preset `role`, `session_authorization`, `row_security` or
+    `app.*` settings;
+  - `current_user ≠ session_user`; `row_security ≠ on`;
+  - and its **effective** table, sequence and function privileges must equal the per-pool
+    allowlist in `role-policy.ts` exactly. Extra or missing privileges both refuse startup.
+- **Migration runner.** It refuses unless the connected role owns the database and is not a
+  superuser, BYPASSRLS or CREATEROLE, and has not switched role. It refuses new files that sort
+  before an applied one. It refuses top-level transaction control or role switches in a file.
+  It verifies afterwards that its own transaction survived.
+
+**Limitations (accepted, recorded).**
+
+- `app_owner` remains the DDL authority. A migration could drop triggers or policies, or
+  `SET ROLE app_definer`. This is mitigated by review, the CI catalog test and the migration
+  identity check, not prevented. True append-only audit needs the shipped log (G-32,
+  pre-production item PP-05).
+- Foreign-key checks against `operator_audit` mean tenants and accounts cannot be deleted (they
+  are never deleted; they are retired or deactivated).
+- Production role provisioning is not in the repository (D-029, G-09). The provisioning steps in
+  `apps/api/test/db/provision.ts` are the reference.
+
+## D-036
+
+**Title:** Owner account lifecycle and the active-tenant ownership invariant
+**Status:** approved (owner decision E-01; design delegated) — implemented, 2026-11-27
+**Evidence:** migration `0006`; `operator-lifecycle.db.test.ts` (29); mutation M-13.
+**Decision.**
+
+- Accounts have a status, `active` or `deactivated`. An identity (`issuer`, `subject`) can be
+  unlinked (both NULL). An active account must be linked (CHECK).
+- **Invariant.** Every **active** tenant has exactly one active owner membership, whose account
+  is active and linked. "At most one active owner" is a partial unique index (E-10). The rest is
+  enforced by the operator functions under row locks:
+  - Deactivating or unlinking an account that owns an active tenant is refused (PTO01).
+  - Revoking the owner of an active tenant is refused: suspend it first, or transfer instead.
+  - Reactivating a tenant requires an active, linked owner.
+- **Operations** are operator-only, MFA session, audited, and compare-and-set on the expected
+  state (PTC01 on stale state):
+  1. Set account status (deactivate or reactivate). Reactivation requires a linked identity.
+  2. Revoke owner membership.
+  3. Unlink identity: the account becomes deactivated and all its sessions end.
+  4. Link identity: only to an unlinked account; the identity must not be bound to any account
+     (PTB01). The account **stays deactivated**: two-step re-linking with an explicit, audited
+     reactivation.
+  5. Transfer ownership: compare-and-set on the current owner (NULL = none). The new owner must
+     not be an operator identity (PTK01) or a deactivated account (PTS01). The old and new
+     owners' sessions are revoked.
+  6. Read tenant/owner and read account, as inputs to compare-and-set.
+- **Takeover prevention.**
+  - Only an MFA operator session can act.
+  - Compare-and-set prevents blind transfers.
+  - An identity already bound elsewhere cannot be attached.
+  - E-mail is never an identifier.
+  - Owner identities must come from the configured owner issuer (E-11).
+- **Concurrency.** Row locks (`FOR UPDATE` / `FOR SHARE`) serialise transfer, deactivation and
+  reactivation. Tests run concurrent transfers (exactly one wins) and deactivate-vs-reactivate
+  races (never an active tenant with an inactive owner).
+- **Out of scope (unchanged):** self-service account recovery stays with the identity provider
+  (D-026). An owner UI is Phase 6. Operator account provisioning is a separate open item
+  (E-05, pre-production item PP-09).
+
+## D-037
+
+**Title:** Rate limiting — pre-parse middleware, one shared budget per group, trusted-proxy model
+**Status:** approved (owner remediation authorization) — implemented, 2026-11-27. Amends D-031.
+The D-031 limits are unchanged.
+**Evidence:** `rate-limit.db.test.ts` (13), `client-address.test.ts`; mutation M-11.
+**Decision.**
+
+- **One limiter per process**, applied as Express middleware **before body parsing** and before
+  any authentication or database work (D-01, D-02).
+  - Groups are classified from the normalised path (decoded, lower-case, repeated slashes
+    collapsed), so case or slash variants share a budget.
+  - Only `/health` and `/health/ready` are unlimited. Unknown paths use the public budget.
+  - A new `session` group (60/min) covers `/auth/sessions`.
+- **Body.** JSON only, at most 32 KB (urlencoded is no longer parsed, B-08). This is below the
+  D-031 bound of 100 KB.
+- **Client identity.**
+  - The socket address, unless the peer is in `API_TRUSTED_PROXIES` (exact IPs/CIDRs). Then
+    `X-Forwarded-For` is read right-to-left, skipping trusted hops.
+  - The BFF's `X-Platform-Client-Address` is honoured only with a valid BFF credential.
+  - Spoofed headers from untrusted peers are ignored.
+  - IPv6 is keyed by `/64` (D-04, D-05).
+- **Memory.** Insertion-ordered table with O(1) amortised eviction. Fail closed when full of
+  live keys. The capacity `Retry-After` comes from the oldest window (D-03, D-06).
+- **Not distributed (recorded honestly).** Limits are per instance. N instances allow N × limit,
+  and limits reset on restart. An edge or shared-store limiter is required before more than
+  one instance (pre-production item PP-04).
+
+## D-038
+
+**Title:** Web login abuse controls
+**Status:** approved (owner remediation authorization C-03) — implemented, 2026-11-27
+**Evidence:** `apps/web/src/auth/handlers.test.ts`, which reproduces the 500-callback
+amplification; mutation M-12.
+**Decision.**
+
+1. **Per-client limit** on `/auth/<kind>/login` and `/callback`: 30/min. The client address
+   comes from `X-Forwarded-For` only with `WEB_TRUSTED_PROXY_HOPS` > 0. Next.js keeps a
+   client-supplied header, so a directly exposed server trusts none.
+2. **Global per-instance limit** on the same routes: 1200/min.
+3. **Global cap on outbound token requests:** `WEB_TOKEN_REQUESTS_PER_MINUTE`, default 600 =
+   10/s per instance, below ZITADEL Cloud's 50 req/s per IP.
+4. **Single-use login transactions.** Each sealed login cookie carries a random id and completes
+   at most one callback (bounded in-memory set, fail closed).
+5. **Local checks before any provider call:** exactly one `state` equal to the transaction's,
+   exactly one well-formed `code` (8–512 printable ASCII), no `error`.
+6. **Discovery failures** back off for 30 s.
+
+**Limitations.** These are per instance. The single-use set is per instance, so with several web
+instances a login cookie could be redeemed once per instance. The API's ID-token replay table
+still allows only one session per login, and the global caps still bound provider traffic
+(pre-production item PP-04).

@@ -50,24 +50,34 @@ them, the documents in `docs/` win and this file should be corrected.
 - The API also accepts two optional variables with secure defaults: `API_CORS_ALLOWED_ORIGINS`
   (exact origins; absent = no cross-origin access) and `API_LOG_LEVEL` (default `info`; `debug`
   rejected in staging and production). See `apps/api/.env.example`.
-- **Database (Phase 2, D-024 – D-029).** The API requires `API_DATABASE_URL` (the restricted
-  `app_runtime` role; a secret) and refuses to start as a superuser, a BYPASSRLS role or a table
-  owner. Migrations are plain SQL in `apps/api/migrations/`, applied as `app_owner` with
-  `MIGRATION_DATABASE_URL` by `pnpm --filter @platform/api migrate`. Operator actions use a separate
-  credential, `API_OPERATOR_DATABASE_URL` (role `app_operator`, which may only execute the audited
-  `SECURITY DEFINER` operator functions). Tenant-scoped queries go
-  only through `withTenant()` (`apps/api/src/infrastructure/database/database.ts`); never call
-  `set_config`/`SET` for `app.tenant_id` anywhere else (a test enforces this). Every new table in
-  schema `app` needs `ENABLE` + `FORCE ROW LEVEL SECURITY` and, if tenant-owned, a `tenant_id`
-  policy with USING and WITH CHECK, or `pnpm test:db` fails.
-- **Web login (M2.6, D-030/D-032/D-033).** Standard OIDC via `openid-client` in
+- **Database (Phase 2, D-024 – D-029, D-035).** The API requires `API_DATABASE_URL` (the restricted
+  `app_runtime` role; a secret) and refuses to start unless that role holds exactly the privileges
+  listed in `apps/api/src/infrastructure/database/role-policy.ts`: no role membership, ownership,
+  superuser, BYPASSRLS or preset settings. Migrations are plain SQL in `apps/api/migrations/`,
+  applied with `MIGRATION_DATABASE_URL` by `pnpm --filter @platform/api migrate`; the runner refuses
+  any role that does not own the database. Operator actions use a separate credential,
+  `API_OPERATOR_DATABASE_URL` (role `app_operator`, which may only execute the audited operator
+  functions). Every `SECURITY DEFINER` function is owned by the NOLOGIN role `app_definer` and has
+  no PUBLIC EXECUTE; `app_owner` has no row access. Tenant-scoped queries go only through
+  `withTenant()` (`apps/api/src/infrastructure/database/database.ts`); never call `set_config`/`SET`
+  for `app.tenant_id` anywhere else (a test enforces this). Every new table in schema `app` needs
+  `ENABLE` + `FORCE ROW LEVEL SECURITY` and, if tenant-owned, the canonical tenant policy **and** a
+  RESTRICTIVE backstop; every new function needs an entry in the catalog test's reviewed grant
+  list and in `role-policy.ts` if an app role may call it. Otherwise `pnpm test:db` fails. Caches
+  and background jobs must use `infrastructure/tenancy/tenant-boundaries.ts`.
+- **Login and sessions (D-030, D-032, D-034, D-038).** Standard OIDC via `openid-client` in
   `apps/web/src/auth/`; no identity-provider-specific code (ZITADEL specifics are configuration).
-  Login is HTTPS-only (tests use a TLS test provider). Sessions are encrypted host-only cookies;
-  tokens never reach browser JavaScript. Operator API calls send the ID token as
-  `X-Authentication-Proof` so the API can enforce MFA. See `apps/web/.env.example`.
+  After the code flow, the BFF sends the ID token and the access token once to the API's
+  `POST /auth/sessions`, which verifies both and creates a revocable server-side session in
+  PostgreSQL. The browser cookie holds only an opaque token. Owner and operator API routes accept
+  only `Authorization: Session <token>` plus the BFF credential (`API_BFF_CREDENTIAL` =
+  `WEB_API_BFF_CREDENTIAL`); bearer tokens are not accepted. Login is HTTPS-only (tests use a TLS
+  test provider). See `apps/web/.env.example` and `apps/api/.env.example`.
 - `pnpm test:db` and `pnpm test:e2e` need a **throwaway, loopback** PostgreSQL superuser URL in
   `TEST_DATABASE_ADMIN_URL`; they fail (never skip) without it. e2e also needs
-  `E2E_API_DATABASE_URL`, printed by `node apps/api/test/db/provision-cli.ts platform_e2e`.
+  `E2E_API_DATABASE_URL`, printed by `node apps/api/test/db/provision-cli.ts platform_e2e`. Set
+  `E2E_SEED_OWNER_ISSUER=https://127.0.0.1:39443` and `E2E_SEED_OWNER_SUBJECT=user-1` for that
+  command so the browser login test has its owner. Test provisioning also creates `app_definer`.
 
 ## Commands (run from the repository root)
 
