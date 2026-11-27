@@ -12,6 +12,19 @@ import type { NextFunction, Request, Response } from 'express';
  */
 const logger = new Logger('HTTP');
 
+/**
+ * The path is client-controlled. It is capped at the source, before it reaches
+ * the logger and its redaction patterns, so per-request logging work stays
+ * small and bounded however long the request line is (audit F-01).
+ */
+export const MAX_LOGGED_PATH_LENGTH = 512;
+
+export function loggablePath(path: string): string {
+  return path.length > MAX_LOGGED_PATH_LENGTH
+    ? `${path.slice(0, MAX_LOGGED_PATH_LENGTH)}…[truncated]`
+    : path;
+}
+
 export function requestLoggingMiddleware(req: Request, res: Response, next: NextFunction): void {
   const started = process.hrtime.bigint();
   res.on('finish', () => {
@@ -19,7 +32,7 @@ export function requestLoggingMiddleware(req: Request, res: Response, next: Next
     logger.log({
       event: 'request',
       method: req.method,
-      path: req.path,
+      path: loggablePath(req.path),
       status: res.statusCode,
       durationMs: Math.round(durationMs * 10) / 10,
       requestId: req.requestId,

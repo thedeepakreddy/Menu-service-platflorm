@@ -56,4 +56,37 @@ describe('JsonLogger', () => {
     }
     expect(all).toContain(REDACTED);
   });
+
+  // Audit F-07.
+  it('caller fields cannot overwrite time, level, context or fatal', () => {
+    const { logger, entries } = capture('info');
+    logger.log(
+      { level: 'error', time: 'spoofed', context: 'Spoofed', fatal: true, event: 'x' },
+      'HTTP',
+    );
+    const entry = entries()[0];
+    expect(entry).toMatchObject({ level: 'info', context: 'HTTP', event: 'x' });
+    expect(entry?.time).not.toBe('spoofed');
+    expect(entry?.fatal).toBeUndefined();
+    expect(entry).toMatchObject({
+      'field.level': 'error',
+      'field.time': 'spoofed',
+      'field.context': 'Spoofed',
+      'field.fatal': true,
+    });
+  });
+
+  it('never throws on BigInt values, and logs them as strings', () => {
+    const { logger, entries } = capture('info');
+    expect(() => {
+      logger.log({ count: 10n });
+    }).not.toThrow();
+    expect(entries()[0]).toMatchObject({ count: '10' });
+  });
+
+  it('still redacts the context argument', () => {
+    const { logger, lines } = capture('info');
+    logger.log('m', 'password=hunter2Synthetic');
+    expect(lines.join('\n')).not.toContain('hunter2Synthetic');
+  });
 });

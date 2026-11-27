@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { MAX_STRING_LENGTH, REDACTED, redact, redactString } from './redact.js';
+import {
+  applyRules,
+  MAX_ENTRIES,
+  MAX_STRING_LENGTH,
+  REDACTED,
+  redact,
+  redactString,
+  SCAN_LIMIT,
+  TRUNCATED_MARKER,
+} from './redact.js';
 
 describe('redactString', () => {
   it.each([
@@ -113,5 +122,140 @@ describe('redact (structured values)', () => {
       cursor = cursor.child;
     }
     expect(JSON.stringify(redact(root))).toContain('[depth limit]');
+  });
+});
+
+// Audit F-05: patterns the independent audit found unredacted (synthetic values only).
+describe('redactString (audit F-05 cases)', () => {
+  it.each([
+    ['env-style upper-case key', 'DB_PASSWORD=hunter2Synthetic', 'hunter2Synthetic'],
+    ['env-style token', 'GITHUB_TOKEN=ghp_SYNTHabcdefghijklmnopqrstu', 'ghp_SYNTH'],
+    ['AWS secret env', 'AWS_SECRET_ACCESS_KEY=wJalrSYNTHETICKEY', 'wJalrSYNTHETICKEY'],
+    ['camelCase key', 'dbPassword=hunter2Synthetic', 'hunter2Synthetic'],
+    ['colon separator', 'apiToken: abc123synthetic', 'abc123synthetic'],
+    ['Authorization: Token', 'Authorization: Token abc123synthetic', 'abc123synthetic'],
+    [
+      'Authorization: Digest',
+      'Authorization: Digest username="u", response="r3sp0nse"',
+      'r3sp0nse',
+    ],
+    ['URL-encoded bearer', 'Bearer%20abc123synthetic', 'abc123synthetic'],
+    ['double-escaped JSON', String.raw`{\"password\":\"hunter2Synthetic\"}`, 'hunter2Synthetic'],
+    ['URL password containing @', 'postgres://user:p@ss@db.example/x', 'p@ss'],
+    [
+      'presigned URL signature',
+      'https://s3.example/x?X-Amz-Signature=deadbeefSYNTH',
+      'deadbeefSYNTH',
+    ],
+    ['OAuth code in a query', 'https://app.example/cb?code=SYNTHcode123', 'SYNTHcode123'],
+    [
+      'PGP private key',
+      '-----BEGIN PGP PRIVATE KEY BLOCK-----\nSYNTHKEY\n-----END PGP PRIVATE KEY BLOCK-----',
+      'SYNTHKEY',
+    ],
+    [
+      'PEM key without END line',
+      '-----BEGIN RSA PRIVATE KEY-----\nMIISYNTHETICKEY',
+      'MIISYNTHETICKEY',
+    ],
+    [
+      'Stripe secret key',
+      'charge failed sk_live_SYNTHETIC1234567890',
+      'sk_live_SYNTHETIC1234567890',
+    ],
+    ['Slack token', 'xoxb-1234567890-SYNTHETIC', 'xoxb-1234567890-SYNTHETIC'],
+    ['value after a non-sensitive pair', 'info: password=hunter2Synthetic', 'hunter2Synthetic'],
+  ])('redacts %s', (_label, input, secret) => {
+    expect(redactString(input)).not.toContain(secret);
+  });
+
+  it('redacts URL-encoded e-mail addresses', () => {
+    expect(redactString('user%40example.com')).toBe('[REDACTED_EMAIL]');
+  });
+
+  it('does not treat ordinary words as query secrets outside a URL query', () => {
+    expect(redactString('status code: 404')).toBe('status code: 404');
+    expect(redactString('state=ready')).toBe('state=ready');
+  });
+
+  it('documents a known limit: phone numbers and names are not detected', () => {
+    expect(redactString('call +1 415 555 0100')).toBe('call +1 415 555 0100');
+  });
+});
+
+// Audit F-01: redaction must cost linear time, and the input is bounded before any pattern runs.
+describe('redaction cost (audit F-01)', () => {
+  /** Median wall time of `fn` over a few runs, in milliseconds. */
+  function medianMs(fn: () => void, runs = 5): number {
+    const times: number[] = [];
+    for (let i = 0; i < runs; i += 1) {
+      const start = performance.now();
+      fn();
+      times.push(performance.now() - start);
+    }
+    times.sort((a, b) => a - b);
+    return times[Math.floor(runs / 2)] ?? 0;
+  }
+
+  const SIZE = 64 * 1024;
+  const fill = (unit: string) => unit.repeat(Math.ceil(SIZE / unit.length)).slice(0, SIZE);
+
+  // One generator per pattern family: each defeated the old `\b<class>+` anchoring.
+  const pathological: [string, string][] = [
+    ['e-mail local part (a.a.a.…)', fill('a.')],
+    ['e-mail with dashes', fill('a-')],
+    ['URL scheme (a+a+…)', fill('a+')],
+    ['URL scheme then no //', fill('a.b:')],
+    ['JWT prefix (eyJ-eyJ-…)', fill('eyJ-')],
+    ['key=value chains (a:a:…)', fill('a:')],
+    ['key=value quoted chains', fill('a:"a')],
+    ['bearer without token', fill('Bearer ')],
+    ['PEM headers without END', fill('-----BEGIN PRIVATE KEY-----x')],
+    ['@ runs', fill('a@')],
+  ];
+
+  // The old patterns took ~0.4 s on 16 KB and grow quadratically (≈6 s on 64 KB);
+  // linear patterns take about a millisecond. 250 ms leaves a wide margin on slow CI.
+  it.each(pathological)('the patterns stay linear on 64 KB of %s', (_label, input) => {
+    expect(medianMs(() => applyRules(input))).toBeLessThan(250);
+  });
+
+  it('cuts the input to SCAN_LIMIT before any pattern runs', () => {
+    const secretBeyondLimit = `${'x'.repeat(SCAN_LIMIT)} password=hunter2Synthetic`;
+    const out = redactString(secretBeyondLimit);
+    expect(out).not.toContain('hunter2Synthetic');
+    expect(out.length).toBeLessThanOrEqual(MAX_STRING_LENGTH + TRUNCATED_MARKER.length);
+    expect(out.endsWith(TRUNCATED_MARKER)).toBe(true);
+  });
+
+  it('still redacts a secret that starts just before the output cap', () => {
+    const input = `${'x'.repeat(MAX_STRING_LENGTH - 20)} password=hunter2Synthetic ${'y'.repeat(2000)}`;
+    expect(redactString(input)).not.toContain('hunter2');
+  });
+
+  it('a 1 MB input produces a bounded result', () => {
+    const out = redactString('a.'.repeat(512 * 1024));
+    expect(out.length).toBeLessThanOrEqual(MAX_STRING_LENGTH + TRUNCATED_MARKER.length);
+  });
+});
+
+describe('redact (structural bounds, audit F-01/F-07)', () => {
+  it('bounds the number of array items and object keys', () => {
+    const many = Array.from({ length: MAX_ENTRIES + 50 }, (_, i) => i);
+    const arr = redact(many) as unknown[];
+    expect(arr).toHaveLength(MAX_ENTRIES + 1);
+    expect(arr.at(-1)).toBe('[50 more items]');
+    const obj = redact(Object.fromEntries(many.map((i) => [`k${String(i)}`, i])));
+    expect(Object.keys(obj as object)).toHaveLength(MAX_ENTRIES + 1);
+  });
+
+  it('converts BigInt and Date values instead of losing or throwing on them', () => {
+    expect(redact({ n: 12n, d: new Date(0) })).toEqual({ n: '12', d: '1970-01-01T00:00:00.000Z' });
+  });
+
+  it('redacts nested strings inside arrays', () => {
+    expect(redact({ list: ['ok', 'password=p4ss'] })).toEqual({
+      list: ['ok', `password=${REDACTED}`],
+    });
   });
 });

@@ -23,6 +23,28 @@ const stdoutSink: LogSink = (line) => {
   process.stdout.write(`${line}\n`);
 };
 
+/** Logger-owned fields that caller-supplied objects cannot overwrite (audit F-07). */
+export const RESERVED_FIELDS: ReadonlySet<string> = new Set(['time', 'level', 'context', 'fatal']);
+
+/**
+ * JSON serialization that never throws. `redact()` already converts BigInt to
+ * a string and bounds depth; the replacer and fallback are a last line of
+ * defence so that a logging call can never crash a request (audit F-07).
+ */
+function serialize(entry: Record<string, unknown>): string {
+  try {
+    return JSON.stringify(entry, (_key, value: unknown) =>
+      typeof value === 'bigint' ? value.toString() : value,
+    );
+  } catch {
+    return JSON.stringify({
+      time: entry.time,
+      level: entry.level,
+      msg: '[unserializable log entry]',
+    });
+  }
+}
+
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return (
     typeof value === 'object' &&
@@ -73,14 +95,23 @@ export class JsonLogger implements LoggerService {
     if (SEVERITY[level] > this.threshold) return;
     const rest = [...params];
     const context = typeof rest.at(-1) === 'string' ? (rest.pop() as string) : undefined;
+    const fields: Record<string, unknown> = {};
+    if (isPlainObject(message)) {
+      // Caller fields can never overwrite the logger's own metadata (audit F-07):
+      // a colliding key is kept, but under `field.<key>`.
+      for (const [key, value] of Object.entries(message)) {
+        fields[RESERVED_FIELDS.has(key) ? `field.${key}` : key] = value;
+      }
+    } else if (message instanceof Error) fields.error = message;
+    else fields.msg = message;
+    const stack = rest.find((p): p is string => typeof p === 'string');
+    if (stack !== undefined) fields.stack = stack;
+
     const entry: Record<string, unknown> = { time: new Date().toISOString(), level };
     if (fatal) entry.fatal = true;
     if (context !== undefined) entry.context = context;
-    if (isPlainObject(message)) Object.assign(entry, message);
-    else if (message instanceof Error) entry.error = message;
-    else entry.msg = message;
-    const stack = rest.find((p): p is string => typeof p === 'string');
-    if (stack !== undefined) entry.stack = stack;
-    this.sink(JSON.stringify(redact(entry)));
+    // Metadata is redacted too (the context string comes from callers).
+    const redacted = redact({ ...entry, ...fields }) as Record<string, unknown>;
+    this.sink(serialize({ ...redacted, time: entry.time, level }));
   }
 }

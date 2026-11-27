@@ -12,6 +12,7 @@ import { AppModule } from './app.module.js';
 import { createApp } from './create-app.js';
 import type { CreateAppOptions } from './create-app.js';
 import { JsonLogger } from './logging/json-logger.js';
+import { MAX_LOGGED_PATH_LENGTH } from './logging/request-logging.js';
 
 const SECRET = 'sk_test_DO_NOT_LOG_42';
 
@@ -174,6 +175,18 @@ describe('structured, redacted logging (D-020)', () => {
     expect(exception).toMatchObject({ level: 'error', requestId: 'req-boom-0001', status: 500 });
     expect(JSON.stringify(exception)).toContain('stack');
     expect(lines.join('\n')).not.toContain(SECRET);
+  });
+
+  // Audit F-01: a long, pathological request path is capped at the source.
+  it('caps a long client-controlled path before logging it', async () => {
+    const { base, entries } = await start();
+    const longPath = `/${'a.'.repeat(7900)}`;
+    const res = await fetch(`${base}${longPath}`);
+    expect(res.status).toBe(404);
+    const request = entries().find((e) => e.event === 'request');
+    const logged = String(request?.path);
+    expect(logged.length).toBeLessThanOrEqual(MAX_LOGGED_PATH_LENGTH + '…[truncated]'.length);
+    expect(logged.endsWith('…[truncated]')).toBe(true);
   });
 
   it('logs 4xx at info with status and code only', async () => {
