@@ -8,36 +8,37 @@
  * `apps/web/src/app/globals.css` declares the same values in its `@theme` block; a test keeps the
  * two identical and checks every text/background pairing against WCAG 2.2 contrast minimums.
  *
- * The preset ("Linen"): warm off-white surfaces, near-black warm ink and a terracotta accent, chosen
- * to suit hospitality venues while staying neutral enough for any venue's own content.
+ * The preset ("Porcelain"): cool porcelain surfaces, green-black ink and a bottle-green accent, the
+ * colours of a well-kept dining room (table linen, glassware, a painted shopfront). Quiet enough to
+ * sit behind any venue's own content; legible in dim or bright light.
  */
 export const COLOR_TOKENS = {
   /** Page background. */
-  surface: '#fbf8f3',
+  surface: '#f6f6f3',
   /** Cards and raised panels. */
   'surface-raised': '#ffffff',
   /** Recessed areas: navigation bar, empty-state art backdrop. */
-  'surface-sunken': '#f2ece3',
+  'surface-sunken': '#eaece7',
   /** Primary text. */
-  ink: '#1f1a16',
+  ink: '#17211c',
   /** Secondary text. */
-  'ink-muted': '#574e46',
+  'ink-muted': '#48544d',
   /** Tertiary text (hints, captions); still meets 4.5:1 on every surface. */
-  'ink-subtle': '#6b6158',
+  'ink-subtle': '#5a6660',
   /** Decorative dividers only (never the sole boundary of a control). */
-  line: '#e3d9cc',
+  line: '#dce0da',
   /** Boundaries of interactive controls (3:1 against surfaces, WCAG 1.4.11). */
-  'line-strong': '#8a7d71',
+  'line-strong': '#78837c',
   /** Brand accent: links, active navigation, primary buttons. */
-  accent: '#9a3412',
+  accent: '#1f5c45',
   /** Accent hover / pressed. */
-  'accent-strong': '#7a2a0e',
+  'accent-strong': '#174836',
   /** Text and icons on the accent colour. */
   'on-accent': '#ffffff',
   /** Tinted accent background (selected tab, illustration fill). */
-  'accent-soft': '#f6e4d8',
+  'accent-soft': '#dcebe2',
   /** Accent-coloured text on the tinted background. */
-  'accent-ink': '#7a2a0e',
+  'accent-ink': '#174836',
   /** Keyboard focus ring (3:1 against every surface). */
   focus: '#1d4ed8',
   /** Error text. */

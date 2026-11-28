@@ -29,13 +29,15 @@ if (seedIssuer !== undefined && seedSubject !== undefined) {
     );
     // Public-entry fixtures (Phase 3): a second active tenant, one whose display name is hostile
     // markup (rendered as text, never as HTML), and one suspended and one retired tenant, which
-    // must be indistinguishable from an unknown slug. Synthetic names only.
+    // must be indistinguishable from an unknown slug, and one with a long name that has very long
+    // words (layout at 320 px). Synthetic names only.
     await admin.query(
       `INSERT INTO app.tenants (slug, display_name, status) VALUES
          ('e2e-bistro', 'E2E Bistro', 'active'),
          ('e2e-markup', '<script>window.__pwned=1</script> & <b>Bold</b>', 'active'),
          ('e2e-closed', 'E2E Closed Venue', 'suspended'),
          ('e2e-gone', 'E2E Retired Venue', 'retired'),
+         ('e2e-long', 'Legendás Hagyományőrző Kézműves Kávéház és Cukrászda a Régi Piactér Sarkán — Egészségszolgáltatásmegszervezhetetlenségeskedéseitekért', 'active'),
          ('e2e-toggle-desktop', 'E2E Toggle Desktop', 'active'),
          ('e2e-toggle-mobile', 'E2E Toggle Mobile', 'active'),
          ('e2e-toggle-tablet', 'E2E Toggle Tablet', 'active')`,

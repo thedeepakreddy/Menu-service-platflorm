@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 
 /*
- * Platform design tokens, default preset "Linen" (Phase 3; D-040 O-3). Values mirror
+ * Platform design tokens, default preset "Porcelain" (Phase 3; D-040 O-3). Values mirror
  * src/design/tokens.ts; a test keeps them identical and checks contrast.
  *
  * `--color-*: initial` removes Tailwind's default palette, so only these semantic roles exist as
@@ -9,19 +9,19 @@
  */
 @theme {
   --color-*: initial;
-  --color-surface: #fbf8f3;
+  --color-surface: #f6f6f3;
   --color-surface-raised: #ffffff;
-  --color-surface-sunken: #f2ece3;
-  --color-ink: #1f1a16;
-  --color-ink-muted: #574e46;
-  --color-ink-subtle: #6b6158;
-  --color-line: #e3d9cc;
-  --color-line-strong: #8a7d71;
-  --color-accent: #9a3412;
-  --color-accent-strong: #7a2a0e;
+  --color-surface-sunken: #eaece7;
+  --color-ink: #17211c;
+  --color-ink-muted: #48544d;
+  --color-ink-subtle: #5a6660;
+  --color-line: #dce0da;
+  --color-line-strong: #78837c;
+  --color-accent: #1f5c45;
+  --color-accent-strong: #174836;
   --color-on-accent: #ffffff;
-  --color-accent-soft: #f6e4d8;
-  --color-accent-ink: #7a2a0e;
+  --color-accent-soft: #dcebe2;
+  --color-accent-ink: #174836;
   --color-focus: #1d4ed8;
   --color-danger: #b42318;
   --color-transparent: transparent;
@@ -34,8 +34,8 @@
   --radius-control: 0.75rem;
   --radius-card: 1.25rem;
 
-  --shadow-card: 0 1px 2px rgb(31 26 22 / 0.06), 0 4px 16px rgb(31 26 22 / 0.06);
-  --shadow-bar: 0 -1px 0 rgb(31 26 22 / 0.08), 0 -4px 16px rgb(31 26 22 / 0.05);
+  --shadow-card: 0 1px 2px rgb(23 33 28 / 0.06), 0 4px 16px rgb(23 33 28 / 0.06);
+  --shadow-bar: 0 -1px 0 rgb(23 33 28 / 0.08), 0 -4px 16px rgb(23 33 28 / 0.05);
 
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
 }

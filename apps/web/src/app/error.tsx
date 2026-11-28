@@ -1,5 +1,7 @@
 'use client';
 
+import { EmptyState } from '../customer/empty-state';
+import { ErrorArt } from '../customer/illustrations';
 import { useMessages } from '../i18n/client';
 
 /**
@@ -9,12 +11,21 @@ import { useMessages } from '../i18n/client';
 export default function ErrorPage({ reset }: { error: Error; reset: () => void }) {
   const messages = useMessages();
   return (
-    <main id="main" className="mx-auto max-w-2xl px-4 py-16">
-      <h1 className="text-2xl font-semibold">{messages.error.title}</h1>
-      <p className="mt-4 text-ink-muted">{messages.error.body}</p>
-      <button type="button" className="mt-6 underline" onClick={reset}>
-        {messages.error.retry}
-      </button>
+    <main id="main" className="mx-auto max-w-5xl px-4 pt-10 pb-12 sm:px-6 md:pt-20">
+      <EmptyState
+        art={<ErrorArt />}
+        title={messages.error.title}
+        body={messages.error.body}
+        action={
+          <button
+            type="button"
+            className="inline-flex min-h-11 items-center rounded-control bg-accent px-5 font-semibold text-on-accent hover:bg-accent-strong"
+            onClick={reset}
+          >
+            {messages.error.retry}
+          </button>
+        }
+      />
     </main>
   );
 }

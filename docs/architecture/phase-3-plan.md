@@ -89,6 +89,38 @@ failure, scope expansion, or a failing gate.
 - **Focus and motion.** The focus ring is 3 px, drawn outside the element on the surrounding
   surface. `prefers-reduced-motion` is honoured globally.
 
+**M3.3 — customer shell, four tabs and empty states (O-4).**
+
+- **Palette revised to "Porcelain".** During the M3.3 design review, the M3.2 "Linen" preset
+  (cream surface with a terracotta accent) was judged a generic default. It was replaced by cool
+  porcelain surfaces, green-black ink and a bottle-green accent. The values are still a proposal
+  for owner review. The contrast tests pass unchanged.
+- **One navigation landmark** (`nav`, "Main"):
+  - **Phones:** a fixed bottom tab bar that respects the safe area. The current tab shows a pill
+    and heavier type.
+  - **768 px and up:** the same nav sits in the header, with an underline on the current tab.
+  - **Marking:** `aria-current="page"` on the current tab; the current tab is never marked by
+    colour alone. Focus rings in the bar are inset, so the screen edge cannot clip them.
+  - **No prefetching:** every tab page is dynamic and calls the API, so a prefetch would only
+    spend the visitor's rate limit.
+- **Home.** The venue name is the one bold element. Its size steps down with name length and
+  with the longest word, because names can be 200 characters and Hungarian words are long. After
+  the name: an honest intro, then a list of the three sections.
+- **Art-directed states.** Menu, Offers, Info, not-found and error each have a line illustration
+  in token colours, a direct explanation and a way forward. The not-found art (a table card with
+  a QR code) is deliberately neutral, so it never hints at tenant lifecycle.
+- **Other details:**
+  - Skip link, unique page titles (`Menu – <venue>`), `viewport-fit=cover`.
+  - The unused `home.eyebrow` and `loading` strings were removed.
+- **Screenshots inspected** at 320, 390, 768 and 1280 px in en and hu, including a 120-character
+  Hungarian name, keyboard focus, the not-found page and the error page. Defects found and fixed:
+  - mid-word breaks in long names (fixed by the size tiers);
+  - bottom-bar focus ring clipped by the screen edge (fixed with an inset ring);
+  - bare not-found page (now illustrated).
+- **Test provisioning creates UTF-8 databases explicitly.** A SQL_ASCII cluster rejected accented
+  names through `tenants_display_name_text`, because each byte of a multi-byte character counts as
+  a control character there (G-52).
+
 ## Out of scope
 
 - Phase 4: menu domain.

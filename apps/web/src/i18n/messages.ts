@@ -31,7 +31,6 @@ const en = {
     info: 'Info',
   },
   home: {
-    eyebrow: 'Welcome',
     intro:
       'The menu, offers and venue details will appear here as soon as the venue publishes them.',
     exploreHeading: 'Explore',
@@ -59,7 +58,6 @@ const en = {
     body: 'We couldn’t load this page just now. Please try again in a moment.',
     retry: 'Try again',
   },
-  loading: 'Loading…',
   locale: {
     label: 'Language',
     change: 'Change language',
@@ -84,7 +82,6 @@ const hu: Messages = {
     info: 'Infó',
   },
   home: {
-    eyebrow: 'Üdvözöljük',
     intro:
       'Az étlap, az ajánlatok és a hely adatai itt jelennek meg, amint a hely közzéteszi őket.',
     exploreHeading: 'Fedezze fel',
@@ -111,7 +108,6 @@ const hu: Messages = {
     body: 'Az oldalt most nem sikerült betölteni. Kérjük, próbálja újra egy kis idő múlva.',
     retry: 'Újrapróbálás',
   },
-  loading: 'Betöltés…',
   locale: {
     label: 'Nyelv',
     change: 'Nyelv módosítása',

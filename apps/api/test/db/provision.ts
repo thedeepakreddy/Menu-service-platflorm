@@ -88,7 +88,12 @@ export async function provisionDatabase(
     );
     await admin.query('GRANT app_definer TO app_owner WITH INHERIT FALSE, SET TRUE');
     await admin.query(`DROP DATABASE IF EXISTS ${database} WITH (FORCE)`);
-    await admin.query(`CREATE DATABASE ${database} OWNER app_owner`);
+    // Always UTF-8, whatever the cluster default: under SQL_ASCII the bytes of a multi-byte
+    // character count as control characters, and tenants_display_name_text would reject names
+    // such as "Kávéház" (found in Phase 3). C collation keeps ordering deterministic.
+    await admin.query(
+      `CREATE DATABASE ${database} OWNER app_owner ENCODING 'UTF8' LC_COLLATE 'C' LC_CTYPE 'C' TEMPLATE template0`,
+    );
     // No default access for other roles; app roles connect explicitly; no TEMP for anyone else.
     await admin.query(`REVOKE ALL ON DATABASE ${database} FROM PUBLIC`);
     await admin.query(`GRANT CONNECT ON DATABASE ${database} TO app_runtime, app_operator`);
