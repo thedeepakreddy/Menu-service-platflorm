@@ -25,7 +25,12 @@ const hsts = hstsHeader(env.APP_ENV);
 const formActionOrigins = [env.WEB_OWNER_OIDC_ISSUER, env.WEB_OPERATOR_OIDC_ISSUER]
   .filter((issuer): issuer is string => issuer !== undefined)
   .map((issuer) => new URL(issuer).origin);
-const devServer = process.env.NODE_ENV === 'development';
+// `next dev` needs eval for React refresh. Never relaxed where staging or production is declared,
+// whatever NODE_ENV says (defence in depth, M3.6 review finding 11).
+const devServer =
+  process.env.NODE_ENV === 'development' &&
+  env.APP_ENV !== 'staging' &&
+  env.APP_ENV !== 'production';
 
 export function proxy(request: NextRequest): NextResponse {
   const csp = contentSecurityPolicy({
@@ -41,6 +46,9 @@ export function proxy(request: NextRequest): NextResponse {
   if (raw !== undefined) requestHeaders.set(RAW_TENANT_SEGMENT_HEADER, raw);
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set('content-security-policy', csp);
+  // noindex for every response, independent of JavaScript and of page metadata: the not-found
+  // shell carries its robots meta only after client rendering (D-040 O-7; G-51; review 10).
+  response.headers.set('x-robots-tag', 'noindex, nofollow');
   if (hsts !== undefined) response.headers.set(hsts.key, hsts.value);
   return response;
 }

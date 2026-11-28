@@ -126,14 +126,32 @@ export const webEnvSchema = z
       });
     }
     // Phase 3 (D-037): the public pages forward each visitor's address to the API with the BFF
-    // credential. Without it, every visitor would share ONE per-client API budget, so a single
-    // visitor could exhaust the public pages for everyone.
+    // credential. Without it, every visitor would share ONE per-client API budget. The forwarded
+    // address is only as good as WEB_TRUSTED_PROXY_HOPS: with 0 (no proxy in front), no visitor
+    // can be attributed and the shared budget remains (G-53; owner decision pending).
     if (PRODUCTION_LIKE.has(env.APP_ENV) && env.WEB_API_BFF_CREDENTIAL === undefined) {
       ctx.addIssue({
         code: 'custom',
         path: ['WEB_API_BFF_CREDENTIAL'],
         message: 'is required in staging and production (per-visitor public limits)',
       });
+    }
+    // Every origin is https in staging and production, with or without login (Phase 3 M3.6,
+    // review finding 1): public-only deployments send the BFF credential and visitor addresses to
+    // the API, and the locale cookie is Secure.
+    if (
+      env.WEB_PUBLIC_ORIGIN !== undefined &&
+      PRODUCTION_LIKE.has(env.APP_ENV) &&
+      !env.WEB_PUBLIC_ORIGIN.startsWith('https://')
+    ) {
+      ctx.addIssue({ code: 'custom', path: ['WEB_PUBLIC_ORIGIN'], message: 'must use https' });
+    }
+    if (
+      env.WEB_API_ORIGIN !== undefined &&
+      PRODUCTION_LIKE.has(env.APP_ENV) &&
+      !env.WEB_API_ORIGIN.startsWith('https://')
+    ) {
+      ctx.addIssue({ code: 'custom', path: ['WEB_API_ORIGIN'], message: 'must use https' });
     }
     if (!anyLogin) return;
     for (const name of [
@@ -149,20 +167,6 @@ export const webEnvSchema = z
           message: 'is required when login is configured',
         });
       }
-    }
-    if (
-      env.WEB_PUBLIC_ORIGIN !== undefined &&
-      PRODUCTION_LIKE.has(env.APP_ENV) &&
-      !env.WEB_PUBLIC_ORIGIN.startsWith('https://')
-    ) {
-      ctx.addIssue({ code: 'custom', path: ['WEB_PUBLIC_ORIGIN'], message: 'must use https' });
-    }
-    if (
-      env.WEB_API_ORIGIN !== undefined &&
-      PRODUCTION_LIKE.has(env.APP_ENV) &&
-      !env.WEB_API_ORIGIN.startsWith('https://')
-    ) {
-      ctx.addIssue({ code: 'custom', path: ['WEB_API_ORIGIN'], message: 'must use https' });
     }
   });
 

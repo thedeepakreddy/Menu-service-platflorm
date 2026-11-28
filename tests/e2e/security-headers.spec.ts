@@ -111,3 +111,12 @@ test.describe('search indexing stays off (D-040 O-7; P3-15)', () => {
     }
   });
 });
+
+test.describe('noindex without JavaScript (G-51; review finding 10)', () => {
+  test('every customer response carries X-Robots-Tag: noindex, nofollow', async ({ request }) => {
+    for (const path of [...PAGES, '/no-such-venue', '/e2e-closed', '/e2e-gone']) {
+      const res = await request.get(path);
+      expect(res.headers()['x-robots-tag'], path).toBe('noindex, nofollow');
+    }
+  });
+});

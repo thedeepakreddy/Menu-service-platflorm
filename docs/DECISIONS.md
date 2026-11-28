@@ -63,6 +63,7 @@ until the owner approves it.
 | [D-038](#d-038) | Web login abuse controls                                                          | approved (owner C-03) — implemented                     | 2026-11-27 |
 | [D-039](#d-039) | Phase 2 formal closure: owner acceptance of R-01 – R-08 and approved defaults     | approved (owner) — Phase 2 CLOSED, PASS WITH CONDITIONS | 2026-11-28 |
 | [D-040](#d-040) | Phase 3 owner decisions O-1 – O-10 and implementation authorization               | approved (owner)                                        | 2026-11-28 |
+| [D-041](#d-041) | Phase 3 engineering record: configuration, dependencies, loading, open decisions  | proposed — pending owner acceptance at Phase 3 closure  | 2026-11-28 |
 
 ---
 
@@ -1447,3 +1448,76 @@ implementation under the reconciled plan
 
 **Not authorized:** production deployment, release, merging, or anything else requiring separate
 approval.
+
+## D-041
+
+**Title:** Phase 3 engineering record. It covers configuration hardening, dependency review,
+loading feedback, the default preset, and the decisions still open for the owner.
+**Status:** **proposed**, implemented in the Phase 3 closure candidate and pending owner
+acceptance. None of this is production approval; PP-01 – PP-11 stay open.
+**Context:** these items arose while implementing and verifying Phase 3 (M3.1 – M3.6). They
+include findings of the M3.6 separate-context review (see
+[`audit/phase-3-report.md`](audit/phase-3-report.md)). Each stays inside D-040 and the
+Phase 1–2 invariants. None changes an API contract, the database schema or the architecture.
+
+1. **Web configuration in staging and production (`apps/web/src/env.ts`).** The web app refuses
+   to start unless all of these hold, **with or without login configured**:
+   - `WEB_API_ORIGIN`, `WEB_PUBLIC_ORIGIN`, `WEB_API_BFF_CREDENTIAL` and `WEB_TRUSTED_PROXY_HOPS`
+     are set;
+   - both origins use https.
+
+   **Rationale:**
+   - The public pages call the API.
+   - The locale switch checks `Origin` against the public origin.
+   - Per-visitor API limits need the BFF credential (D-037).
+   - Before M3.6, a public-only deployment could use plain http origins and send the BFF
+     credential and visitor addresses in clear text. This was review finding 1, fixed.
+
+2. **Visitor attribution (`apps/web/src/http/client-address.ts`).** Only the right-most
+   `WEB_TRUSTED_PROXY_HOPS` entries of `X-Forwarded-For` are read. A client that prepends any
+   number of entries can no longer push itself into the shared "unknown" bucket (review
+   finding 2, low part). This applies to login (D-038) and to the public pages.
+3. **Dependency review (Doc 05 §8; D-005, D-040 O-8).** All are dev-only (test workspace) and
+   arrived through pnpm with the minimum-release-age policy intact; the lockfile passed its
+   supply-chain check.
+
+   | Package                | Version | Licence | Published  | Install scripts | Notes                                                                                                  |
+   | ---------------------- | ------- | ------- | ---------- | --------------- | ------------------------------------------------------------------------------------------------------ |
+   | `@axe-core/playwright` | 4.14.0  | MPL-2.0 | 2026-10-15 | none            | Pulls in `axe-core`                                                                                    |
+   | `axe-core`             | 4.14.1  | MPL-2.0 | 2026-11-16 | none            | No dependencies                                                                                        |
+   | `pg`, `@types/pg`      | 8.23.1  | MIT     | —          | none            | Already reviewed for the API (D-024); used by the e2e lifecycle test through `TEST_DATABASE_ADMIN_URL` |
+
+   MPL-2.0 is file-level copyleft. It is acceptable for an unmodified test-only dependency that
+   is never shipped.
+
+4. **Loading feedback (Doc 03 §20; P3-03).**
+   - Tenant routes have **no** streamed `loading.tsx`, because one would answer a missing
+     tenant with status 200 (M3.1).
+   - Pages are resolved completely before their first byte.
+   - Client navigations show a pending indicator on the chosen link (`useLinkStatus`,
+     `customer/pending-indicator.tsx`), and an e2e test covers it.
+   - Screen readers get the new page title through Next.js's route announcer.
+5. **Default preset "Porcelain" (O-3).** Porcelain surfaces, green-black ink, a bottle-green
+   accent and a separate blue focus ring.
+   - The values are a **design proposal for owner review**.
+   - No specification fixes the palette.
+   - Tests enforce WCAG 2.2 AA contrast for every pairing used.
+6. **Search indexing.** Besides the `noindex` meta (D-040 O-7), every web response now carries
+   `X-Robots-Tag: noindex, nofollow`. This keeps noindex independent of JavaScript, which
+   matters because the 404 page is rendered in the browser (G-51).
+7. **Dev-only CSP relaxation.** `'unsafe-eval'` is added only when `NODE_ENV` is `development`
+   **and** `APP_ENV` is neither staging nor production.
+
+**Open owner decisions (not resolved by this record):**
+
+- **OD-1 — `WEB_TRUSTED_PROXY_HOPS=0` in staging and production (G-53).**
+  - It must be stated explicitly, but 0 is still accepted.
+  - With 0, no visitor can be attributed, so all visitors share one per-client API budget of
+    120 requests a minute (D-031). One visitor could then exhaust the public pages for everyone.
+  - The value is not forced to 1 or more: a server exposed directly, with no proxy, cannot
+    attribute visitors safely, and claiming one hop there would trust a forgeable header.
+  - The owner decides: forbid 0 in staging and production (deployments must sit behind a
+    proxy), or accept the risk until the deployment topology is fixed (PP-04, G-43).
+- **OD-2 — status code for a rate-limited visitor (G-54).** An API 429 on a public page becomes
+  the generic error page with status 500. The owner decides whether to map it to 503 or 429
+  with `Retry-After`, which needs a framework approach for setting status from a page.

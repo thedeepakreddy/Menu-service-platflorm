@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import { TabIcon } from '../../customer/icons';
+import { PendingIndicator } from '../../customer/pending-indicator';
 import { NAME_SIZE_CLASS, nameSize } from '../../customer/name-size';
 import { tabHref } from '../../customer/tabs';
 import { getRequestLocale } from '../../i18n/server';
@@ -45,7 +46,7 @@ export default async function TenantHome({ params }: { params: Promise<{ tenant:
               <Link
                 href={tabHref(slug, tab)}
                 prefetch={false}
-                className="group flex min-h-18 items-center gap-4 px-5 py-4 hover:bg-surface-sunken"
+                className="group relative flex min-h-18 items-center gap-4 px-5 py-4 hover:bg-surface-sunken"
               >
                 <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-ink">
                   <TabIcon tab={tab} />
@@ -71,6 +72,7 @@ export default async function TenantHome({ params }: { params: Promise<{ tenant:
                 >
                   <path d="m9 6 6 6-6 6" />
                 </svg>
+                <PendingIndicator />
               </Link>
             </li>
           ))}

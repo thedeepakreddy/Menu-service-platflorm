@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 
 import { useMessages } from '../i18n/client';
 import { TabIcon } from './icons';
+import { PendingIndicator } from './pending-indicator';
 import { TABS, activeTab, tabHref } from './tabs';
 
 /**
@@ -32,7 +33,7 @@ export function TabNav({ slug }: { slug: string }) {
                 prefetch={false}
                 aria-current={isCurrent ? 'page' : undefined}
                 className={[
-                  'group flex min-h-16 flex-col items-center justify-center gap-1 px-1 pt-2 pb-1.5 text-[0.8125rem] leading-tight',
+                  'group relative flex min-h-16 flex-col items-center justify-center gap-1 px-1 pt-2 pb-1.5 text-[0.8125rem] leading-tight',
                   // Inset ring: the fixed bar sits on the screen edge and would clip an outer one.
                   'focus-visible:-outline-offset-3 md:focus-visible:outline-offset-3',
                   'md:min-h-11 md:flex-row md:gap-2 md:rounded-control md:px-3.5 md:py-2 md:text-[0.9375rem]',
@@ -57,6 +58,7 @@ export function TabNav({ slug }: { slug: string }) {
                 >
                   {messages.nav[tab]}
                 </span>
+                <PendingIndicator />
               </Link>
             </li>
           );

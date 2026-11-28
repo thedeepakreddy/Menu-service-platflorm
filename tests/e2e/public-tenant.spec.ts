@@ -89,6 +89,32 @@ test.describe('tenant-safe not found (O-1, D-027)', () => {
   });
 });
 
+test.describe('lifecycle is invisible in the raw server response (review finding 9)', () => {
+  test('unknown, suspended and retired get byte-identical responses once the path and nonce are normalized', async ({
+    request,
+    baseURL,
+  }) => {
+    const VOLATILE = new Set(['date', 'x-request-id', 'content-length', 'content-security-policy']);
+    const raw = async (path: string) => {
+      const res = await request.get(web(baseURL, path), { maxRedirects: 0 });
+      const headers = res.headers();
+      const nonce = /'nonce-([^']+)'/.exec(headers['content-security-policy'] ?? '')?.[1] ?? '';
+      const body = (await res.text()).replaceAll(nonce, 'NONCE').replaceAll(path.slice(1), 'PATH');
+      // The nonce also appears in Next.js's Link preload header.
+      const kept = Object.entries(headers)
+        .filter(([name]) => !VOLATILE.has(name))
+        .map(([name, value]) => [name, value.replaceAll(nonce, 'NONCE')])
+        .sort(([a = ''], [b = '']) => a.localeCompare(b));
+      const csp = (headers['content-security-policy'] ?? '').replaceAll(nonce, 'NONCE');
+      return { status: res.status(), headers: kept, csp, body };
+    };
+    const unknown = await raw('/no-such-venue');
+    expect(unknown.status).toBe(404);
+    expect(await raw('/e2e-closed')).toEqual(unknown);
+    expect(await raw('/e2e-gone')).toEqual(unknown);
+  });
+});
+
 test.describe('no trust in client-supplied routing hints', () => {
   test('Host, X-Forwarded-Host and the raw-segment header cannot change the tenant', async ({
     request,

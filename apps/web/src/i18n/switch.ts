@@ -39,7 +39,10 @@ export function safeReturnPath(raw: unknown): string {
   } catch {
     return '/';
   }
-  return url.origin === PROBE_ORIGIN ? url.pathname : '/';
+  if (url.origin !== PROBE_ORIGIN) return '/';
+  // Dot segments can normalize to a protocol-relative path ('/.//evil.example' → '//evil.example'),
+  // which would leave the site if ever used as a relative Location (M3.6 review finding 4).
+  return url.pathname.startsWith('//') ? '/' : url.pathname;
 }
 
 /** Session cookie holding the chosen locale. */
@@ -63,8 +66,13 @@ export function createLocaleSwitchHandler(config: { publicOrigin: string | undef
     if (!type.toLowerCase().startsWith('application/x-www-form-urlencoded')) {
       return plain(415, 'Unsupported media type');
     }
-    const declared = Number(request.headers.get('content-length') ?? '0');
-    if (!Number.isFinite(declared) || declared > MAX_BODY_BYTES) return plain(413, 'Too large');
+    // Browsers always send Content-Length for a form POST. Requiring it means an over-long body is
+    // refused before it is read (M3.6 review finding 5).
+    const lengthHeader = request.headers.get('content-length');
+    if (lengthHeader === null || !/^\d{1,6}$/.test(lengthHeader)) {
+      return plain(411, 'Length required');
+    }
+    if (Number(lengthHeader) > MAX_BODY_BYTES) return plain(413, 'Too large');
     const body = await request.text();
     if (new TextEncoder().encode(body).length > MAX_BODY_BYTES) return plain(413, 'Too large');
     const form = new URLSearchParams(body);

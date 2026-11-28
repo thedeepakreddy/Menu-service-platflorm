@@ -3,13 +3,17 @@
 // static and dynamic relative import transitively; a self-check proves it really finds auth code
 // where it IS used, so the main assertion cannot pass vacuously.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
 const SRC = import.meta.dirname;
-const AUTH_DIR = join(SRC, 'auth');
+const AUTH_DIR = join(SRC, 'auth') + sep;
+const AUTH_ROUTES = join(SRC, 'app', 'auth') + sep;
 const AUTH_PACKAGES = ['openid-client', 'jose'];
+/** A package or any of its subpaths (`jose`, `jose/jwt/verify`). */
+const isAuthPackage = (spec: string) =>
+  AUTH_PACKAGES.some((p) => spec === p || spec.startsWith(`${p}/`));
 const IMPORT =
   /(?:import|export)\s[^'"]*?from\s*['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]\s*\)|import\s+['"]([^'"]+)['"]/g;
 
@@ -53,9 +57,7 @@ function walk(dir: string): string[] {
 
 /** Customer-facing entry points: every route outside /auth, the root layout and the proxy. */
 const PUBLIC_ENTRIES = [
-  ...walk(join(SRC, 'app')).filter(
-    (f) => !f.startsWith(join(SRC, 'app', 'auth')) && !/\.test\.tsx?$/.test(f),
-  ),
+  ...walk(join(SRC, 'app')).filter((f) => !f.startsWith(AUTH_ROUTES) && !/\.test\.tsx?$/.test(f)),
   join(SRC, 'proxy.ts'),
 ];
 
@@ -81,12 +83,19 @@ describe('public pages never reach auth code (P3-13)', () => {
   });
 
   it('no login/token library is reachable', () => {
-    expect([...packages].filter((p) => AUTH_PACKAGES.includes(p))).toEqual([]);
+    expect([...packages].filter(isAuthPackage)).toEqual([]);
+  });
+
+  it('matches auth packages by subpath, and only the auth route directory is excluded', () => {
+    expect(isAuthPackage('jose/jwt/verify')).toBe(true);
+    expect(isAuthPackage('openid-client/passport')).toBe(true);
+    expect(isAuthPackage('josefine')).toBe(false);
+    expect(join(SRC, 'app', 'authors', 'page.tsx').startsWith(AUTH_ROUTES)).toBe(false);
   });
 
   it('self-check: the walker does find auth code from the login routes', () => {
-    const login = closure(walk(join(SRC, 'app', 'auth')));
+    const login = closure(walk(AUTH_ROUTES));
     expect([...login.files].some((f) => f.startsWith(AUTH_DIR))).toBe(true);
-    expect([...login.packages].some((p) => AUTH_PACKAGES.includes(p))).toBe(true);
+    expect([...login.packages].some(isAuthPackage)).toBe(true);
   });
 });

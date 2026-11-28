@@ -15,23 +15,23 @@ an O-decision).
 
 ## Requirements
 
-| ID    | Requirement                                                                                                              | Source                                                | Planned paths                                         | Verification                                                              |
-| ----- | ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------- |
-| P3-01 | Public tenant routing; tenant resolved server-side; ambiguous or invalid context rejected safely                         | SR: Doc 05 §13; Doc 03 §3; Doc 01 §3, §10; D-027; O-1 | `apps/web/src/app/[tenant]/…`, `apps/web/src/public/` | Resolver unit tests; hostile-path E2E; identical 404                      |
-| P3-02 | No client-supplied tenant identity trusted; no internal ids in URLs or HTML                                              | SR: Doc 03 §3, §18; Doc 01 §3                         | Resolver uses the slug only                           | HTML/uuid scan; Host/X-Forwarded-Host spoofing E2E                        |
-| P3-03 | Public error states: invalid/retired/unsupported → tenant-safe fallback with recovery; loading; failure                  | SR: Doc 05 §13; Doc 03 §3, §20                        | `not-found.tsx`, `error.tsx`, `loading.tsx`           | E2E per state; status codes                                               |
-| P3-04 | Four-tab navigation (Home, Menu, Offers, Info), platform-governed, accessible active state                               | SR: Doc 03 §5; Doc 01 §4, §15; O-4                    | Customer shell                                        | Keyboard/landmark/`aria-current` E2E; axe                                 |
-| P3-05 | Honest, art-directed empty/unavailable states for content not yet available                                              | SR: Doc 03 §6, §20; O-4                               | Empty-state component                                 | Screenshots inspected; axe                                                |
-| P3-06 | Governed design tokens, one default preset                                                                               | SR: Doc 05 §13; Doc 03 §16; Doc 01 §15; O-3, O-9      | `apps/web/src/theme/`, `globals.css`                  | Contrast tests; no raw colours outside tokens                             |
-| P3-07 | Localization base: `en`/`hu`, `en` default/fallback, cookie + Accept-Language, typed catalogue, formatting, `lang`/`dir` | SR: Doc 03 §15; Doc 01 §15; SEQ-2; O-2, O-10          | `apps/web/src/i18n/`                                  | Unit tests; E2E switch; `lang` asserted                                   |
-| P3-08 | Session-only, minimal, anonymous context                                                                                 | SR: Doc 03 §1, §3; Doc 01 §11                         | Locale session cookie only                            | Cookie attribute tests                                                    |
-| P3-09 | Content delivery seam: provisioned identity + platform config only                                                       | SR: Doc 05 §13, §7; O-5                               | `apps/web/src/public/`                                | Contract tests (no fields beyond `publicTenantSchema`)                    |
-| P3-10 | No shared caching; `private, no-store`                                                                                   | SR: Doc 03 §17; Doc 05 §7; O-6; G-37                  | Headers                                               | Header assertions; two-tenant E2E; suspension visible on the next request |
-| P3-11 | Cross-tenant protections verified                                                                                        | SR: Doc 05 §13 exit; Doc 03 §22, §23                  | —                                                     | Two-tenant adversarial E2E                                                |
-| P3-12 | Responsive and accessible (320/390/768/1280; keyboard; focus; reduced motion; no colour-only meaning)                    | SR: Doc 03 §16; Doc 01 §15, §20; O-8                  | —                                                     | axe; keyboard E2E; inspected screenshots                                  |
-| P3-13 | Public pages expose no owner/operator APIs, auth state or internal metadata                                              | SR: Doc 04 §21; Doc 03 §24                            | Import-boundary test                                  | Test; HTML scan                                                           |
-| P3-14 | Strict CSP with nonces                                                                                                   | PD: G-31 (deferred to this phase)                     | `apps/web/src/proxy.ts`                               | Header tests; no violations in E2E                                        |
-| P3-15 | `noindex` kept                                                                                                           | O-7, D-009                                            | Metadata                                              | Header/meta assertion                                                     |
+| ID    | Requirement                                                                                                              | Source                                                | Planned paths                                                                                                       | Verification                                                              |
+| ----- | ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| P3-01 | Public tenant routing; tenant resolved server-side; ambiguous or invalid context rejected safely                         | SR: Doc 05 §13; Doc 03 §3; Doc 01 §3, §10; D-027; O-1 | `apps/web/src/app/[tenant]/…`, `apps/web/src/public/`                                                               | Resolver unit tests; hostile-path E2E; identical 404                      |
+| P3-02 | No client-supplied tenant identity trusted; no internal ids in URLs or HTML                                              | SR: Doc 03 §3, §18; Doc 01 §3                         | Resolver uses the slug only                                                                                         | HTML/uuid scan; Host/X-Forwarded-Host spoofing E2E                        |
+| P3-03 | Public error states: invalid/retired/unsupported → tenant-safe fallback with recovery; loading; failure                  | SR: Doc 05 §13; Doc 03 §3, §20                        | `not-found.tsx`, `error.tsx`; loading: no streamed `loading.tsx` (M3.1), navigation pending indicator (M3.6, D-041) | E2E per state; status codes                                               |
+| P3-04 | Four-tab navigation (Home, Menu, Offers, Info), platform-governed, accessible active state                               | SR: Doc 03 §5; Doc 01 §4, §15; O-4                    | Customer shell                                                                                                      | Keyboard/landmark/`aria-current` E2E; axe                                 |
+| P3-05 | Honest, art-directed empty/unavailable states for content not yet available                                              | SR: Doc 03 §6, §20; O-4                               | Empty-state component                                                                                               | Screenshots inspected; axe                                                |
+| P3-06 | Governed design tokens, one default preset                                                                               | SR: Doc 05 §13; Doc 03 §16; Doc 01 §15; O-3, O-9      | `apps/web/src/design/tokens.ts`, `globals.css` (planned as `theme/`; renamed in M3.2)                               | Contrast tests; no raw colours outside tokens                             |
+| P3-07 | Localization base: `en`/`hu`, `en` default/fallback, cookie + Accept-Language, typed catalogue, formatting, `lang`/`dir` | SR: Doc 03 §15; Doc 01 §15; SEQ-2; O-2, O-10          | `apps/web/src/i18n/`                                                                                                | Unit tests; E2E switch; `lang` asserted                                   |
+| P3-08 | Session-only, minimal, anonymous context                                                                                 | SR: Doc 03 §1, §3; Doc 01 §11                         | Locale session cookie only                                                                                          | Cookie attribute tests                                                    |
+| P3-09 | Content delivery seam: provisioned identity + platform config only                                                       | SR: Doc 05 §13, §7; O-5                               | `apps/web/src/public/`                                                                                              | Contract tests (no fields beyond `publicTenantSchema`)                    |
+| P3-10 | No shared caching; `private, no-store`                                                                                   | SR: Doc 03 §17; Doc 05 §7; O-6; G-37                  | Headers                                                                                                             | Header assertions; two-tenant E2E; suspension visible on the next request |
+| P3-11 | Cross-tenant protections verified                                                                                        | SR: Doc 05 §13 exit; Doc 03 §22, §23                  | —                                                                                                                   | Two-tenant adversarial E2E                                                |
+| P3-12 | Responsive and accessible (320/390/768/1280; keyboard; focus; reduced motion; no colour-only meaning)                    | SR: Doc 03 §16; Doc 01 §15, §20; O-8                  | —                                                                                                                   | axe; keyboard E2E; inspected screenshots                                  |
+| P3-13 | Public pages expose no owner/operator APIs, auth state or internal metadata                                              | SR: Doc 04 §21; Doc 03 §24                            | Import-boundary test                                                                                                | Test; HTML scan                                                           |
+| P3-14 | Strict CSP with nonces                                                                                                   | PD: G-31 (deferred to this phase)                     | `apps/web/src/proxy.ts`                                                                                             | Header tests; no violations in E2E                                        |
+| P3-15 | `noindex` kept                                                                                                           | O-7, D-009                                            | Metadata                                                                                                            | Header/meta assertion                                                     |
 
 ## Milestones
 
@@ -176,6 +176,44 @@ failure, scope expansion, or a failing gate.
   - A deliberately planted import was caught by the test, then removed.
 - **Decision.** This was done as a test rather than a new dependency-cruiser rule. Adding a rule
   needs an owner-reviewed fixture set (CLAUDE.md), so it remains a possible future hardening.
+
+**M3.6 — verification, hardening and closure candidate.**
+
+- **Sources.** All five specification PDFs were read in full, and their SHA-256 values match
+  `docs/README.md`. They are unchanged since `b963239`. P3-01 – P3-15 were reconciled against
+  Doc 05 §13, Doc 03 and D-040 O-1 – O-10 (report §2, §3).
+- **Accessibility.**
+  - `@axe-core/playwright`: WCAG 2.2 A/AA on 8 page types in en and hu, on desktop, mobile and
+    tablet, with zero violations. A self-check proves violations are detected.
+  - Keyboard order and focus indicators; reduced motion; no content hidden behind the phones'
+    tab bar.
+- **Visual QA.** 48 screenshots of the candidate build at 320, 390, 768 and 1280 px, in en and
+  hu, including the error page, were inspected with no defects. Contact sheets with SHA-256 are
+  in [`audit/phase-3-screenshots/`](../audit/phase-3-screenshots/).
+- **Separate-context review** (an AI subagent, not a human). PASS WITH CONDITIONS, with no
+  critical or high findings. Every finding has a disposition (report §7). Fixed:
+  - https enforced without login;
+  - long `X-Forwarded-For` chains no longer select the shared bucket;
+  - protocol-relative return paths refused;
+  - locale POST requires `Content-Length`;
+  - boundary test matches package subpaths;
+  - `X-Robots-Tag` on every response;
+  - dev CSP relaxation tied to `APP_ENV`;
+  - raw 404 responses compared server-side;
+  - dependency review recorded (D-041).
+
+  Open owner decisions: OD-1 (`WEB_TRUSTED_PROXY_HOPS=0`, G-53) and OD-2 (429 shown as 500,
+  G-54).
+
+- **Loading state (Doc 03 §20).** Added a navigation pending indicator (`useLinkStatus`). Tenant
+  pages still resolve fully before their first byte (D-041).
+- **Correction to the M3.4 entry above.** It said a shared API budget for public-only deployments
+  was prevented by making the forwarding configuration mandatory. That holds only when
+  `WEB_TRUSTED_PROXY_HOPS` is at least 1. With `0`, which is still accepted, all visitors share
+  one budget (OD-1, G-53).
+- **New tests.** `noindex` (meta and header) and byte-identical lifecycle responses.
+  - e2e: 210 runs across three projects (90 at the end of M3.5, two projects).
+  - Web unit tests: 227 (211 at the end of M3.5).
 
 ## Out of scope
 

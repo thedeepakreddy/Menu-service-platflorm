@@ -46,6 +46,21 @@ describe('parseWebEnv', () => {
     },
   );
 
+  it.each([
+    ['WEB_API_ORIGIN', 'http://api.example'],
+    ['WEB_PUBLIC_ORIGIN', 'http://app.example'],
+  ] as const)(
+    'requires https for %s in staging and production even without login (M3.6 review)',
+    (name, value) => {
+      for (const APP_ENV of ['production', 'staging']) {
+        expect(() => parseWebEnv({ ...publicOnly, APP_ENV, [name]: value })).toThrow(
+          new RegExp(`${name} is invalid`),
+        );
+      }
+      expect(() => parseWebEnv({ ...publicOnly, APP_ENV: 'test', [name]: value })).not.toThrow();
+    },
+  );
+
   it('rejects a missing APP_ENV', () => {
     expect(() => parseWebEnv({})).toThrow(/APP_ENV is required/);
   });

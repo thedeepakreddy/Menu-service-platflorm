@@ -132,3 +132,26 @@ test.describe('fixed tab bar (phones)', () => {
     }
   });
 });
+
+test.describe('loading feedback (Doc 03 §20; P3-03)', () => {
+  test('the chosen tab shows a pending indicator until the next page arrives', async ({ page }) => {
+    await page.goto('/e2e-cafe');
+    // Hold the next page's server response, as a slow network would.
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route('**/e2e-cafe/offers**', async (route) => {
+      await held;
+      await route.continue();
+    });
+    const offers = page
+      .getByRole('navigation', { name: 'Main' })
+      .getByRole('link', { name: 'Offers' });
+    await offers.click();
+    await expect(offers.locator('[data-pending]')).toHaveAttribute('data-pending', 'true');
+    release();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('No offers right now');
+    await expect(offers.locator('[data-pending]')).toHaveAttribute('data-pending', 'false');
+  });
+});

@@ -17,6 +17,8 @@ function post(
     headers: {
       origin: ORIGIN,
       'content-type': 'application/x-www-form-urlencoded',
+      // As a browser sends it for a form POST.
+      'content-length': String(new TextEncoder().encode(body).length),
       ...headers,
     },
     body: init.method === 'GET' ? undefined : body,
@@ -40,6 +42,9 @@ describe('safeReturnPath (no open redirect)', () => {
     ['', '/'],
     ['cafe-roma', '/'],
     [`/${'a'.repeat(600)}`, '/'],
+    ['/.//evil.example', '/'],
+    ['/a/../..//evil.example', '/'],
+    ['/./cafe-roma', '/cafe-roma'],
   ])('%j → %s', (input, expected) => {
     expect(safeReturnPath(input)).toBe(expected);
   });
@@ -97,6 +102,25 @@ describe('locale switch handler', () => {
       (await handler(post('{"locale":"hu"}', { 'content-type': 'application/json' }))).status,
     ).toBe(415);
     expect((await handler(post(`locale=hu&return=/${'a'.repeat(2000)}`))).status).toBe(413);
+  });
+
+  it('refuses a body without a declared length (no unbounded read)', async () => {
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('locale=hu'));
+        controller.close();
+      },
+    });
+    const res = await handler(
+      new Request(`${ORIGIN}/platform/locale`, {
+        method: 'POST',
+        headers: { origin: ORIGIN, 'content-type': 'application/x-www-form-urlencoded' },
+        body: stream,
+        duplex: 'half',
+      } as RequestInit),
+    );
+    expect(res.status).toBe(411);
+    expect(res.headers.get('set-cookie')).toBeNull();
   });
 
   it('accepts POST only', async () => {
