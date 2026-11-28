@@ -43,6 +43,8 @@ export default defineConfig({
   projects: [
     { name: 'chromium-desktop', use: { ...devices['Desktop Chrome'] } },
     { name: 'chromium-mobile', use: { ...devices['Pixel 7'] } },
+    // Tablet width (Doc 03 §16; P3-12), rendered by Chromium like the other projects.
+    { name: 'chromium-tablet', use: { ...devices['iPad (gen 7)'], browserName: 'chromium' } },
   ],
   webServer: [
     {

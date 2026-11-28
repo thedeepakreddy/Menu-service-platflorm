@@ -111,3 +111,24 @@ test.describe('localized shell (O-2, O-10)', () => {
     await context.close();
   });
 });
+
+test.describe('fixed tab bar (phones)', () => {
+  test('at the end of the page, nothing is hidden behind the tab bar', async ({ page }) => {
+    for (const path of ['/e2e-long', '/e2e-cafe/menu']) {
+      await page.goto(path);
+      await page.evaluate(() => {
+        window.scrollTo(0, document.documentElement.scrollHeight);
+      });
+      // The last interactive element on the page must be the topmost element at its centre.
+      const last = page.getByRole('button', { name: 'Magyar' });
+      await expect(last).toBeInViewport();
+      const box = await last.boundingBox();
+      expect(box, path).not.toBeNull();
+      const hit = await page.evaluate(
+        ([x, y]) => document.elementFromPoint(x ?? 0, y ?? 0)?.closest('button')?.textContent ?? '',
+        [(box?.x ?? 0) + (box?.width ?? 0) / 2, (box?.y ?? 0) + (box?.height ?? 0) / 2],
+      );
+      expect(hit, path).toBe('Magyar');
+    }
+  });
+});
