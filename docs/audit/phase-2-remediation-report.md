@@ -1,7 +1,10 @@
 # Phase 2 — Audit remediation and closure candidate
 
-**Status:** closure **candidate** for the owner's review. Phase 2 is **not** formally closed by this
-document (owner instruction §12). Nothing has been merged, deployed, released or opened as a PR.
+**Status:** **Phase 2 CLOSED — PASS WITH CONDITIONS** (owner acceptance, 2026-11-28; closure
+record in §26). This was first written as a closure candidate. Its findings, evidence and
+verdict are unchanged; §21 and §26 now record the owner's acceptance. Closure is **not**
+production approval: PP-01 – PP-11 remain open (§22). Nothing has been merged, deployed, released
+or opened as a PR.
 
 **Branch:** `claude/phase-1-audit-closure-x347eo`.
 **Baseline (audited):** `4656ab3`.
@@ -144,7 +147,9 @@ record the design, evidence and limitations of each change.
 | `bd5accb` | Deterministic ports in process-spawning tests                         |
 | `8184813` | Test fixes from CI (superuser attribute) and mutation testing (azp)   |
 | `390060a` | Tenant-safe cache/job boundary; D-034 – D-038; CLAUDE.md              |
-| final     | STATUS/GAPS ledger, this report, review results (see `git log`)       |
+| `88ef7b7` | Report, findings register, exit-gate matrix, STATUS and GAPS          |
+| `c5ece6d` | Fixes from the independent review (R2-02, R2-04, R2-05, R2-07, R2-09) |
+| `8016cc8` | Final verification ledger — **the verified closure commit** (§26)     |
 
 No history was rewritten. All commits are on the authorized branch only.
 
@@ -324,16 +329,20 @@ Open items with their classification:
 
 ## 21. Accepted residual risks
 
-| ID   | Risk                                                                                     | Why accepted                                                                                                        |
-| ---- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| R-01 | Same-system authorship of audit, remediation and review                                  | Mitigated by a separate cold-start reviewer; a human or third-party review is recommended before production (PP-10) |
-| R-02 | ZITADEL token shapes verified in source code, not on a live tenant                       | No account may be created (owner constraint); PP-03                                                                 |
-| R-03 | `app_owner` (DDL) can alter policies or triggers, or assume `app_definer`                | Inherent to a migration role; catalog test, migration identity and review                                           |
-| R-04 | `app_runtime` + `app_operator` credentials together can mint and use an operator session | Two separately held secrets; the database cannot verify JWTs itself                                                 |
-| R-05 | Instance-local limits and single-use set                                                 | Phase 2 runs as one instance; PP-04                                                                                 |
-| R-06 | Provider SSO session can outlive a local revocation                                      | Local session revoked immediately; PP-07                                                                            |
-| R-07 | In-flight request during revocation completes                                            | Milliseconds; inherent                                                                                              |
-| R-08 | Static shared BFF credential                                                             | Rotation by restart; mTLS later                                                                                     |
+**Owner acceptance:** R-01 – R-08 were accepted by the owner on 2026-11-28 ("Phase 2 — Owner
+Acceptance and Final Closure Instructions", §1). The acceptance applies to **Phase 2 closure
+only**. It is not production approval, and each risk keeps its pre-production blocker.
+
+| ID   | Risk                                                                                                                                                                                                 | Justification                                                                                                                                                      | Pre-production blocker                                                     | Owner                |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- | -------------------- |
+| R-01 | The same AI system authored the audit, the remediation and the review                                                                                                                                | Mitigated by a separate cold-start reviewer agent working in its own clone; not organisational independence                                                        | PP-10 (independent human or third-party review)                            | accepted for Phase 2 |
+| R-02 | ZITADEL token shapes verified in ZITADEL's source code, not on a live tenant                                                                                                                         | No provider account may be created (owner constraint); tests use a local issuer with the same shapes                                                               | PP-01, PP-02, PP-03                                                        | accepted for Phase 2 |
+| R-03 | `app_owner` (DDL authority) can alter policies, disable triggers, re-grant itself and erase the audit trail (R2-08), or `SET ROLE app_definer`                                                       | Inherent to a migration role; mitigated by the catalog test (triggers must be enabled), migration identity checks, review, and the definer creating nothing (0007) | PP-05 (audit log shipping), PP-08 (production role provisioning)           | accepted for Phase 2 |
+| R-04 | The `app_runtime` credential alone can mint sessions, including MFA operator sessions, for existing accounts; acting as an operator also needs the separately held `app_operator` credential (R2-01) | The database cannot verify identity-provider signatures itself; B-03 is strengthened, not eliminated                                                               | PP-08, PP-11 (credentials held and rotated separately in the secret store) | accepted for Phase 2 |
+| R-05 | Rate limits and the single-use login set are instance-local; full key table refuses new clients (R2-03)                                                                                              | Phase 2 runs as one instance                                                                                                                                       | PP-04                                                                      | accepted for Phase 2 |
+| R-06 | The identity provider's SSO session can outlive a local revocation                                                                                                                                   | The local session is revoked immediately                                                                                                                           | PP-07                                                                      | accepted for Phase 2 |
+| R-07 | A request already past session validation completes during a revocation                                                                                                                              | Milliseconds; inherent to check-then-act                                                                                                                           | — (no blocker; inherent)                                                   | accepted for Phase 2 |
+| R-08 | Static shared BFF credential                                                                                                                                                                         | Rotation by restart of both apps; mTLS or signed assertions later                                                                                                  | PP-11                                                                      | accepted for Phase 2 |
 
 ## 22. Pre-production blockers
 
@@ -435,6 +444,9 @@ verification").
 
 ## 25. Proposed final verdict
 
+**Owner decision (2026-11-28):** accepted. Phase 2 is closed with this verdict, **PASS WITH
+CONDITIONS** (§26, D-039). Conditions 1 and 3 below are fulfilled; condition 2 remains in force.
+
 **PASS WITH CONDITIONS.** This is also the verdict the independent reviewer proposed, with
 conditions that are now fulfilled.
 
@@ -463,3 +475,75 @@ owner must accept them explicitly.
 2. PP-01 – PP-11 stay open as production gates (Phase 10), and none is treated as satisfied by
    this phase.
 3. Formal closure is recorded by the owner. This report does not close Phase 2.
+
+## 26. Phase 2 formal closure record (2026-11-28)
+
+**Authority:** owner message "Phase 2 — Owner Acceptance and Final Closure Instructions"
+(2026-11-28). Phase 2 remediation was accepted, subject to the final closure gate below. That
+gate **passed**.
+
+**Verdict:** **PASS WITH CONDITIONS.**
+
+**Verified closure commit:** `8016cc88206b7be402179d8eb90fa7b0a3a6df9b` (`8016cc8`), branch
+`claude/phase-1-audit-closure-x347eo`. Local and remote heads were identical when verified, and
+the working tree was clean. The commit that records this closure contains documentation only.
+
+**Gate evidence for the exact commit `8016cc8`:**
+
+| Gate                               | Evidence                                                                                                                     | Result                                                                                                                                                                                                        |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CI                                 | Run #27, id `46063746175`, job `140723968012`, `head_sha` = `8016cc88206b…6df9b`                                             | **success**: every step (install, PostgreSQL, format, lint, typecheck, tests, arch, build, database tests, e2e provisioning, Playwright, e2e) succeeded; the report upload was skipped because nothing failed |
+| Clean-room run                     | Fresh clone checked out at `8016cc8`; Node 24.22.3; new throwaway PostgreSQL 16.15 cluster (loopback, synthetic credentials) | —                                                                                                                                                                                                             |
+| `pnpm install --frozen-lockfile`   |                                                                                                                              | pass                                                                                                                                                                                                          |
+| `pnpm format:check`                |                                                                                                                              | pass                                                                                                                                                                                                          |
+| `pnpm lint`                        |                                                                                                                              | pass (0 warnings)                                                                                                                                                                                             |
+| `pnpm typecheck`                   |                                                                                                                              | pass                                                                                                                                                                                                          |
+| `pnpm test`                        | contracts 31, web 54, api 215, tests 93                                                                                      | **393 passed**                                                                                                                                                                                                |
+| `pnpm arch`                        | 153 modules, 430 dependencies                                                                                                | 0 violations                                                                                                                                                                                                  |
+| `pnpm build`                       |                                                                                                                              | pass                                                                                                                                                                                                          |
+| `pnpm test:db`                     | real PostgreSQL                                                                                                              | **167 passed**                                                                                                                                                                                                |
+| `pnpm test:e2e`                    | desktop and mobile Chromium, incl. browser login and logout                                                                  | **12 passed**                                                                                                                                                                                                 |
+| `pnpm audit` / `pnpm audit --prod` |                                                                                                                              | no known vulnerabilities                                                                                                                                                                                      |
+| Specification PDFs                 | `git diff 4656ab3 8016cc8 -- docs/specifications`                                                                            | empty (unchanged)                                                                                                                                                                                             |
+| Preserved audit report             | SHA-256                                                                                                                      | `5a9102f86d48dc3328f9e435f95b8d6e49869ad2cb485cb9867f8c9557232651` (unchanged)                                                                                                                                |
+
+CI results for parent commits (#23 – #26) are recorded in §18 and STATUS.md. They are **not** relied
+on for this gate.
+
+**Owner decisions recorded** (DECISIONS.md D-039):
+
+- R-01 – R-08 accepted for Phase 2 closure only (§21).
+- Approved defaults:
+
+  | Setting                             | Value              |
+  | ----------------------------------- | ------------------ |
+  | Owner idle session timeout          | 30 min             |
+  | Operator idle session timeout       | 15 min             |
+  | Web login per-client limit          | 30 requests/min    |
+  | Web login global limit              | 1,200 requests/min |
+  | Identity-provider token-request cap | 600 requests/min   |
+  | Maximum request body                | 32 KB              |
+
+  These are exactly the values in the code at `8016cc8`; none was changed.
+
+**Not changed by closure:**
+
+- PP-01 – PP-11 remain **open** pre-production blockers. None is resolved, waived or implied
+  satisfied. Phase 2 closure is **not** production readiness.
+
+**Outstanding workflows (recorded, not implemented):**
+
+- **Owner invitation flow:** not implemented. Its design remains unapproved (SEQ-1) and belongs to
+  its designated future phase (GAPS G-48).
+- **Operator-account provisioning:** a pre-production blocker (PP-09, G-47). No procedure has
+  been invented or approved; it requires a separate review.
+- **External human or third-party security review:** still required before production (PP-10,
+  G-49).
+
+**Preserved unchanged:**
+
+- the independent audit report;
+- this report's findings and evidence;
+- the original specification PDFs.
+
+**Scope:** no Phase 3 work, merge, PR, deployment or release.

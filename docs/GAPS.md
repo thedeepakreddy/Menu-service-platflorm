@@ -6,7 +6,7 @@ Until then, the work that depends on it must not be implemented on assumed answe
 
 **"Blocks"** names the earliest Doc 05 phase that cannot complete without a resolution.
 
-_Last updated: 2026-11-27 (independent-audit remediation)_
+_Last updated: 2026-11-28 (Phase 2 formal closure; G-42 – G-49 remain open)_
 
 ## A. Specification completeness and conflicts
 
@@ -106,6 +106,6 @@ Its §22 lists pre-production blockers PP-01 – PP-11.
 | G-44 | Operator audit log shipping to an append-only store of record (PP-05, G-32)                                                                                                           | 10              | open                  |
 | G-45 | Server and proxy request timeouts (audit D-08, PP-06)                                                                                                                                 | 10              | open                  |
 | G-46 | Back-channel logout from the identity provider (PP-07)                                                                                                                                | 10              | open                  |
-| G-47 | Operator account provisioning procedure (audit E-05, PP-09)                                                                                                                           | 10              | open                  |
-| G-48 | Owner invitation flow (SEQ-1 not approved; audit E-02)                                                                                                                                | 6               | open (owner decision) |
-| G-49 | Independent human or third-party security review before production (PP-10)                                                                                                            | 10              | open                  |
+| G-47 | Operator account provisioning procedure (audit E-05, PP-09). Documented pre-production blocker; no procedure is invented or approved without a separate review (D-039)                | 10              | open                  |
+| G-48 | Owner invitation flow: not implemented; its design (SEQ-1) remains unapproved and belongs to its designated future phase (audit E-02, D-039)                                          | 6               | open (owner decision) |
+| G-49 | External human or third-party security review: still required before production (PP-10, D-039)                                                                                        | 10              | open                  |

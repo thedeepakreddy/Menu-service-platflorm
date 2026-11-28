@@ -61,6 +61,7 @@ until the owner approves it.
 | [D-036](#d-036) | Owner account lifecycle and the active-tenant ownership invariant                 | approved (owner E-01) — implemented                     | 2026-11-27 |
 | [D-037](#d-037) | Rate limiting: pre-parse middleware, shared group budgets, trusted-proxy model    | approved (owner remediation) — implemented              | 2026-11-27 |
 | [D-038](#d-038) | Web login abuse controls                                                          | approved (owner C-03) — implemented                     | 2026-11-27 |
+| [D-039](#d-039) | Phase 2 formal closure: owner acceptance of R-01 – R-08 and approved defaults     | approved (owner) — Phase 2 CLOSED, PASS WITH CONDITIONS | 2026-11-28 |
 
 ---
 
@@ -1103,8 +1104,8 @@ Supersedes D-033 and amends D-025 and D-030.
      the MFA maximum age; never later than the access token. The database enforces the same
      ceilings with its own clock (CHECK constraints plus `least()` in `session_create`).
    - **Idle expiry** is renewed on use (at most every 30 s), never past the absolute expiry.
-     Defaults are owners 1800 s and operators 900 s, both configurable. These are technical
-     defaults, not specification requirements; the owner may change them.
+     Defaults are owners 1800 s (30 min) and operators 900 s (15 min), configurable within
+     bounds. **Approved by the owner on 2026-11-28 (D-039).**
    - An operator session without MFA cannot exist (CHECK `sessions_operator_mfa`).
 4. **Every authenticated request.**
    - Owner and operator routes accept only `Authorization: Session <token>` **and** the BFF
@@ -1347,3 +1348,55 @@ set is per instance, so with several web
 instances a login cookie could be redeemed once per instance. The API's ID-token replay table
 still allows only one session per login, and the global caps still bound provider traffic
 (pre-production item PP-04).
+
+## D-039
+
+**Title:** Phase 2 formal closure — owner acceptance of residual risks R-01 – R-08 and approval
+of operational defaults
+**Status:** approved (owner), 2026-11-28.
+**Approval evidence:** owner message "Phase 2 — Owner Acceptance and Final Closure Instructions"
+(2026-11-28). It accepts the Phase 2 remediation subject to a final closure gate on commit
+`8016cc8`. That gate passed: see
+[`audit/phase-2-remediation-report.md`](audit/phase-2-remediation-report.md) §26 and STATUS.md
+"Phase 2 formal closure".
+
+**Decision.**
+
+1. **Accepted residual risks R-01 – R-08**, exactly as recorded in the remediation report §21,
+   for **Phase 2 closure only**. This is **not** production approval. Each risk keeps its
+   pre-production blocker:
+
+   | Risk | Summary                                                     | Blocker              |
+   | ---- | ----------------------------------------------------------- | -------------------- |
+   | R-01 | Same-system authorship                                      | PP-10                |
+   | R-02 | Token shapes verified in source code only                   | PP-01, PP-02, PP-03  |
+   | R-03 | Migration role is the DDL authority and can erase the audit | PP-05, PP-08         |
+   | R-04 | The runtime credential can mint sessions                    | PP-08, PP-11         |
+   | R-05 | Instance-local limits                                       | PP-04                |
+   | R-06 | Provider SSO outlives a local revocation                    | PP-07                |
+   | R-07 | In-flight request during revocation                         | inherent, no blocker |
+   | R-08 | Static BFF credential                                       | PP-11                |
+
+2. **Approved defaults.** They must not be changed silently: a change needs a new decision.
+
+   | Setting                             | Value                     | Where enforced                                            |
+   | ----------------------------------- | ------------------------- | --------------------------------------------------------- |
+   | Owner idle session timeout          | **30 minutes**            | `API_OWNER_SESSION_IDLE_SECONDS`, default 1800 (D-034)    |
+   | Operator idle session timeout       | **15 minutes**            | `API_OPERATOR_SESSION_IDLE_SECONDS`, default 900 (D-034)  |
+   | Web login per-client limit          | **30 requests/minute**    | `apps/web/src/auth/handlers.ts` (D-038)                   |
+   | Web login global limit              | **1,200 requests/minute** | `apps/web/src/auth/handlers.ts` (D-038)                   |
+   | Identity-provider token-request cap | **600 requests/minute**   | `WEB_TOKEN_REQUESTS_PER_MINUTE`, default 600 (D-038)      |
+   | Maximum request body                | **32 KB**                 | `JSON_BODY_LIMIT` in `apps/api/src/create-app.ts` (D-037) |
+
+   These are the values present in the code at `8016cc8`; none was altered by this decision.
+
+3. **Pre-production blockers PP-01 – PP-11 remain open.** None is resolved, waived or implied
+   satisfied by Phase 2 closure.
+4. **Outstanding workflows, recorded as is:**
+   - Owner invitation flow: not implemented; its design is unapproved (SEQ-1) and belongs to its
+     designated future phase (G-48).
+   - Operator-account provisioning: pre-production blocker PP-09 (G-47); no procedure is
+     invented or approved without a separate review.
+   - An external human or third-party security review is still required before production
+     (PP-10, G-49).
+5. **Verdict recorded:** **PASS WITH CONDITIONS.**
