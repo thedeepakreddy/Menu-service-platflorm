@@ -21,7 +21,7 @@ Neither blocks the Phase 3 exit criteria in Doc 05 §13. Both are pre-production
 ## 1. Milestones and gates
 
 Each milestone was implemented, verified locally, committed, pushed, and gated on a green CI run
-of its exact commit. This was re-checked at the start of M3.6 against the GitHub Actions run
+of its exact commit, except `670fa20` and `4d52b6d` as shown below (§6a). This was re-checked at the start of M3.6 against the GitHub Actions run
 list.
 
 | Milestone                                      | Commit    | CI run (exact `head_sha`)   |
@@ -112,7 +112,8 @@ list.
   - **zero violations**.
 - **axe self-check.** A static page with planted violations (`image-alt`, `link-name`,
   `button-name`) is reported, so the gate is not vacuous (§6a, item 2).
-- **axe on the error state** (API unavailable) in en and hu: zero violations, and the page has
+- **axe on the error state** (reached by a rate-limited visitor: the API's 429 is shown as the
+  error page; an API outage renders the same `error.tsx`) in en and hu: zero violations, and the page has
   its own title (§6a, item 3).
 - **Keyboard order** on the home page: skip link, venue, Home, Menu, Offers, Info, the three
   section links, English, Magyar.
@@ -193,8 +194,47 @@ The final inspection found **no defects**.
 
 ## 6. Verification of the closure candidate
 
-_Recorded by the documentation-only commit that follows the candidate commit: the exact SHA,
-its CI run, the clean-room commands and results, and the counts._
+**Candidate:** `a9e27a28ac76738b7734c5ca82d5ee9b32c9c190`, branch
+`claude/phase-1-audit-closure-x347eo`.
+
+- It was pushed. No other push happened until its CI run had finished.
+- Later commits are documentation only.
+
+**CI (exact commit):** run #39 `46115524597`, job `140888367940`, `head_sha` = `a9e27a2…c190`:
+**success**: every step succeeded (e2e step 06:14:09–06:15:14 UTC); the report upload was skipped because nothing failed.
+
+**Clean room:**
+
+- A fresh `git clone` checked out at `a9e27a2`.
+- Node 24.22.3, pnpm 12.22.0.
+- A new throwaway PostgreSQL 16.15 cluster (UTF-8, port 25480), stopped afterwards.
+
+| Command                          | Result                                                |
+| -------------------------------- | ----------------------------------------------------- |
+| `pnpm install --frozen-lockfile` | ok                                                    |
+| `pnpm format:check`              | pass                                                  |
+| `pnpm lint`                      | pass (0 warnings)                                     |
+| `pnpm typecheck`                 | pass                                                  |
+| `pnpm test`                      | 566 passed (contracts 31, web 227, api 215, tests 93) |
+| `pnpm arch`                      | 0 violations (202 modules, 557 dependencies)          |
+| `pnpm build`                     | pass                                                  |
+| `pnpm test:db`                   | 167 passed (real PostgreSQL)                          |
+| `pnpm test:e2e`                  | 216 passed (desktop, mobile and tablet Chromium)      |
+| `pnpm audit --prod`              | no known vulnerabilities                              |
+| Working tree after the run       | clean                                                 |
+| Specification PDFs               | unchanged (`git diff` empty)                          |
+
+**Earlier clean-room runs:** `cfad19e` and `670fa20` also passed every step (195 and 210 e2e).
+A first attempt on `a9e27a2` did not reach the tests: its cluster port, 55480, was briefly held
+by an ephemeral client socket. It was rerun on port 25480, outside the ephemeral range.
+
+**Separate-context check of the final delta** (`670fa20..a9e27a2`): PASS WITH CONDITIONS, with
+no regressions. Its three LOW items and their dispositions:
+
+- **Error-state label:** wording fixed (§4).
+- **§1 overstated the CI gating:** wording fixed (§1).
+- **Residual chance of an e2e visitor-address collision** with the deliberately exhausting
+  visitors: recorded as G-57, with its fix (a reserved address range).
 
 ## 7. Separate-context review
 
@@ -262,6 +302,8 @@ The fixes in §6a were made after the re-review. They touch only:
   - **G-51:** the 404 page is rendered in the browser. Mitigated: noindex is now a header.
   - **G-52:** production and staging databases must be UTF-8.
   - **G-55:** the boundary rule could move to dependency-cruiser.
+  - **G-56:** a staging smoke check of the locale POST through the real proxy chain.
+  - **G-57:** a residual e2e flake risk from visitor-address collisions (LOW).
 - **Limitations:** no manual assistive-technology audit (§4); the review is not
   human-independent (§7).
 - **Out of scope:**

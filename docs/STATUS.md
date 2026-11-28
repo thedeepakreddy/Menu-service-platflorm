@@ -807,5 +807,29 @@ Authority: D-040 and the owner's Phase 3.6 execution prompt and specification. F
 [`audit/phase-3-report.md`](audit/phase-3-report.md). Decisions: [D-041](DECISIONS.md#d-041),
 including open owner decisions OD-1 and OD-2.
 
-The exact-commit CI run and clean-room evidence for the candidate are recorded in the report §6
-by a documentation-only commit that follows the candidate commit.
+**Candidate:** `a9e27a28ac76738b7734c5ca82d5ee9b32c9c190`; later commits are documentation only.
+
+- **CI:** run #39 `46115524597` on the exact commit: **success**: every step succeeded (e2e step 06:14:09–06:15:14 UTC); the report upload was skipped because nothing failed.
+- **Clean room:** a fresh clone of `a9e27a2`, Node 24.22.3, a new PostgreSQL 16.15 cluster.
+
+  | Command                        | Result                               |
+  | ------------------------------ | ------------------------------------ |
+  | install                        | ok (frozen lockfile)                 |
+  | format, lint, typecheck, build | pass                                 |
+  | `pnpm test`                    | 566 passed                           |
+  | `pnpm arch`                    | 0 violations                         |
+  | `pnpm test:db`                 | 167 passed                           |
+  | `pnpm test:e2e`                | 216 passed (desktop, mobile, tablet) |
+  | `pnpm audit --prod`            | no known vulnerabilities             |
+  | Specification PDFs             | unchanged                            |
+
+- **Accessibility:** axe WCAG 2.2 AA found zero violations, including the error state.
+- **Screenshots:** 48 captured and inspected; committed in `audit/phase-3-screenshots/`.
+- **Review:** the separate-context review (an AI subagent, not human) gave **PASS WITH
+  CONDITIONS**. Every finding has a disposition.
+- **Earlier candidate:** `670fa20` had no exact-commit CI (#37 cancelled by my push), and #38
+  failed on a flaky test, since fixed. See report §6a.
+- **For the owner:**
+  - decide OD-1 and OD-2 (D-041);
+  - accept D-041 and the "Porcelain" preset;
+  - accept the closure candidate.
