@@ -1,6 +1,6 @@
 // Customer shell (Phase 3 M3.3; D-040 O-4; Doc 03 §16): four tabs, current-tab semantics, honest
 // empty states, keyboard bypass, same-tenant links only, no horizontal scrolling.
-import { expect, test } from '@playwright/test';
+import { expect, test, visitorHeaders } from './fixtures.js';
 
 const SLUG = 'e2e-cafe';
 const TABS = [
@@ -97,7 +97,10 @@ test.describe('localized shell (O-2, O-10)', () => {
   test('Hungarian visitors get the Hungarian shell, with the venue name untouched', async ({
     browser,
   }) => {
-    const context = await browser.newContext({ locale: 'hu-HU' });
+    const context = await browser.newContext({
+      locale: 'hu-HU',
+      extraHTTPHeaders: visitorHeaders('hu'),
+    });
     const page = await context.newPage();
     await page.goto(`/${SLUG}/menu`);
     await expect(page.locator('html')).toHaveAttribute('lang', 'hu');

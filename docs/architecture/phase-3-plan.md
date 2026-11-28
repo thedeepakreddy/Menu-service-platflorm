@@ -121,6 +121,34 @@ failure, scope expansion, or a failing gate.
   names through `tenants_display_name_text`, because each byte of a multi-byte character counts as
   a control character there (G-52).
 
+**M3.4 — localization (O-2, O-10; P3-07, P3-08).**
+
+- **Language choice.** A plain form POST to `/platform/locale`. The path sits under the reserved
+  `platform` segment, so it can never shadow a tenant slug. The control works without JavaScript.
+  - **CSRF:** POST only, and only with `Origin` equal to `WEB_PUBLIC_ORIGIN`.
+  - **Fail closed:** without that origin the switch is refused and the control is not rendered.
+  - **Redirect:** the return target is reduced to a same-origin path; anything else goes to `/`.
+  - **Input:** the body must be form-encoded and at most 1 KB.
+  - **Cookie:** `__Host-platform-locale` is a session cookie (no Max-Age), HttpOnly, Secure and
+    SameSite=Lax, and holds only the locale code. It is the only customer-side state (P3-08).
+  - **Accessibility:** each language is named in its own language and marked with `lang`; the
+    current one has `aria-pressed`.
+- **Formatting.** `Intl` helpers for numbers, prices (explicit ISO 4217 currency), dates, times
+  and lists. Dates and times have no default time zone: a venue's zone is not provisioned, and
+  the server's zone would show wrong hours.
+- **Configuration tightened (found by the e2e suite).** In staging and production,
+  `WEB_PUBLIC_ORIGIN`, `WEB_API_BFF_CREDENTIAL` and `WEB_TRUSTED_PROXY_HOPS` are now required even
+  without login. Previously a public-only deployment would have sent every visitor's lookups
+  through ONE per-client API budget (120 a minute, D-031), so a single visitor could have denied
+  the public pages to everyone. No limit was raised: the D-037 forwarding is now mandatory
+  configuration (G-53).
+- **e2e topology.** The e2e web server now runs as if behind one trusted proxy
+  (`WEB_TRUSTED_PROXY_HOPS=1`), and each test sends its own `X-Forwarded-For` (`fixtures.ts`), so
+  each test is a separate visitor. A new test shows that one visitor exhausting the budget gets
+  the generic error state while another visitor is still served.
+- **Screenshots inspected.** Footer and switcher at 320 and 1280 px, and the Hungarian 404 page
+  after a switch. One defect, the footer rule being inset at 1280 px, was found and fixed.
+
 ## Out of scope
 
 - Phase 4: menu domain.

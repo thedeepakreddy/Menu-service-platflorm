@@ -82,6 +82,9 @@ export default defineConfig({
         WEB_SESSION_SECRET: E2E_SESSION_SECRET,
         WEB_API_ORIGIN: `http://127.0.0.1:${API_PORT}`,
         WEB_API_BFF_CREDENTIAL: E2E_BFF_CREDENTIAL,
+        // One trusted proxy in front, as in staging/production; tests send its X-Forwarded-For
+        // entry (fixtures.ts), so each test is its own visitor at the API's per-visitor limits.
+        WEB_TRUSTED_PROXY_HOPS: '1',
         WEB_OWNER_OIDC_ISSUER: E2E_OIDC_ISSUER,
         WEB_OWNER_OIDC_CLIENT_ID: 'owner-web',
         WEB_OWNER_OIDC_CLIENT_SECRET: 'synthetic-e2e-client-secret',

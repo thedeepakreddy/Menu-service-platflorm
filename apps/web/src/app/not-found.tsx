@@ -1,5 +1,6 @@
 import { EmptyState } from '../customer/empty-state';
 import { NotFoundArt } from '../customer/illustrations';
+import { LocaleFooter } from '../i18n/locale-footer';
 import { getRequestLocale } from '../i18n/server';
 
 /**
@@ -10,12 +11,15 @@ import { getRequestLocale } from '../i18n/server';
 export default async function NotFound() {
   const { messages } = await getRequestLocale();
   return (
-    <main id="main" className="mx-auto max-w-5xl px-4 pt-10 pb-12 sm:px-6 md:pt-20">
-      <EmptyState
-        art={<NotFoundArt />}
-        title={messages.notFound.title}
-        body={messages.notFound.body}
-      />
-    </main>
+    <>
+      <main id="main" className="mx-auto max-w-5xl px-4 pt-10 pb-12 sm:px-6 md:pt-20">
+        <EmptyState
+          art={<NotFoundArt />}
+          title={messages.notFound.title}
+          body={messages.notFound.body}
+        />
+      </main>
+      <LocaleFooter />
+    </>
   );
 }

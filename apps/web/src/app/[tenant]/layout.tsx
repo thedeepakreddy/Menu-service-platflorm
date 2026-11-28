@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import type { ReactNode } from 'react';
 
 import { TabNav } from '../../customer/tab-nav';
+import { LocaleFooter } from '../../i18n/locale-footer';
 import { tabHref } from '../../customer/tabs';
 import { getPublicTenant } from '../../public/server';
 
@@ -46,6 +47,7 @@ export default async function TenantLayout({ children, params }: Props) {
         </div>
       </header>
       {children}
+      <LocaleFooter />
     </div>
   );
 }

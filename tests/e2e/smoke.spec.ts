@@ -1,5 +1,5 @@
 import { REQUEST_ID_HEADER, errorEnvelopeSchema, healthResponseSchema } from '@platform/contracts';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures.js';
 
 const API = 'http://127.0.0.1:4100';
 

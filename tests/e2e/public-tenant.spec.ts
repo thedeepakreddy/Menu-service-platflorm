@@ -1,6 +1,6 @@
 // Public tenant entry (Phase 3; Doc 05 §13 exit, Doc 03 §3, §20, §22–§23; D-027, D-040 O-1, O-6):
 // real browser, built web app, built API, real PostgreSQL. Seeded by provision-cli (e2e fixtures).
-import { expect, test } from '@playwright/test';
+import { expect, test, visitorHeaders } from './fixtures.js';
 import pg from 'pg';
 
 const ACTIVE = 'e2e-cafe';
@@ -21,7 +21,10 @@ test.describe('public tenant entry', () => {
   });
 
   test('two tenants never mix, even when requested in parallel', async ({ browser }) => {
-    const [first, second] = await Promise.all([browser.newPage(), browser.newPage()]);
+    const [first, second] = await Promise.all([
+      browser.newPage({ extraHTTPHeaders: visitorHeaders('first') }),
+      browser.newPage({ extraHTTPHeaders: visitorHeaders('second') }),
+    ]);
     for (let round = 0; round < 5; round += 1) {
       const [a, b] = await Promise.all([
         first.goto(`/${ACTIVE}`).then(() => first.content()),
@@ -145,5 +148,29 @@ test.describe('no shared caching (O-6)', () => {
       await admin.query("UPDATE app.tenants SET status = 'active' WHERE slug = $1", [slug]);
       await admin.end();
     }
+  });
+});
+
+test.describe('per-visitor limits through the web tier (D-037)', () => {
+  test('one visitor exhausting the public budget does not deny service to another', async ({
+    request,
+    baseURL,
+  }) => {
+    const greedy = visitorHeaders('greedy');
+    const statuses: number[] = [];
+    // The API allows 120 public requests per visitor and minute (D-031/D-037).
+    for (let i = 0; i < 125; i += 1) {
+      statuses.push((await request.get(web(baseURL, `/${OTHER}`), { headers: greedy })).status());
+    }
+    expect(statuses.slice(0, 100).every((s) => s === 200)).toBe(true);
+    // Refused at the API: the visitor gets the generic error state, never a tenant page.
+    expect(statuses.at(-1)).toBe(500);
+    const refused = await request.get(web(baseURL, `/${OTHER}`), { headers: greedy });
+    expect(await refused.text()).not.toContain('E2E Bistro');
+    // Another visitor is unaffected.
+    const other = await request.get(web(baseURL, `/${OTHER}`), {
+      headers: visitorHeaders('patient'),
+    });
+    expect(other.status()).toBe(200);
   });
 });

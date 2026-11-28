@@ -2,11 +2,23 @@ import { describe, expect, it } from 'vitest';
 
 import { parseWebEnv } from './env';
 
+const BFF = 'synthetic-bff-credential-for-tests-only-00000';
+// The minimum for staging/production public pages (Phase 3), without login.
+const publicOnly = {
+  WEB_API_ORIGIN: 'https://api.example',
+  WEB_PUBLIC_ORIGIN: 'https://app.example',
+  WEB_API_BFF_CREDENTIAL: BFF,
+  WEB_TRUSTED_PROXY_HOPS: '1',
+};
+
 describe('parseWebEnv', () => {
   it('accepts a valid configuration', () => {
-    expect(parseWebEnv({ APP_ENV: 'production', WEB_API_ORIGIN: 'https://api.example' })).toEqual({
+    expect(parseWebEnv({ ...publicOnly, APP_ENV: 'production' })).toEqual({
       APP_ENV: 'production',
       WEB_API_ORIGIN: 'https://api.example',
+      WEB_PUBLIC_ORIGIN: 'https://app.example',
+      WEB_API_BFF_CREDENTIAL: BFF,
+      WEB_TRUSTED_PROXY_HOPS: 1,
       WEB_OWNER_OIDC_SCOPES: '',
       WEB_OPERATOR_OIDC_SCOPES: '',
       WEB_TOKEN_REQUESTS_PER_MINUTE: 600,
@@ -18,6 +30,21 @@ describe('parseWebEnv', () => {
     expect(() => parseWebEnv({ APP_ENV: 'staging' })).toThrow(/WEB_API_ORIGIN is required/);
     expect(() => parseWebEnv({ APP_ENV: 'development' })).not.toThrow();
   });
+
+  it.each([
+    ['WEB_PUBLIC_ORIGIN', /WEB_PUBLIC_ORIGIN is required/],
+    ['WEB_API_BFF_CREDENTIAL', /WEB_API_BFF_CREDENTIAL is required/],
+    ['WEB_TRUSTED_PROXY_HOPS', /WEB_TRUSTED_PROXY_HOPS is required/],
+  ] as const)(
+    'requires %s in staging and production even without login (Phase 3 public pages)',
+    (name, message) => {
+      for (const APP_ENV of ['production', 'staging']) {
+        expect(() => parseWebEnv({ ...publicOnly, APP_ENV, [name]: undefined })).toThrow(message);
+      }
+      expect(() => parseWebEnv({ APP_ENV: 'test' })).not.toThrow();
+      expect(() => parseWebEnv({ APP_ENV: 'development' })).not.toThrow();
+    },
+  );
 
   it('rejects a missing APP_ENV', () => {
     expect(() => parseWebEnv({})).toThrow(/APP_ENV is required/);

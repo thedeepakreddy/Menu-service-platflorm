@@ -108,6 +108,33 @@ export const webEnvSchema = z
         message: 'is required in staging and production (public tenant pages)',
       });
     }
+    // The locale switch checks the request Origin against it (CSRF, Phase 3 M3.4).
+    if (PRODUCTION_LIKE.has(env.APP_ENV) && env.WEB_PUBLIC_ORIGIN === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['WEB_PUBLIC_ORIGIN'],
+        message: 'is required in staging and production (locale switch)',
+      });
+    }
+    // R2-04, Phase 3: the proxy topology decides whose address the login AND public-page limits
+    // see; it must be stated explicitly in staging and production, never left to a default.
+    if (PRODUCTION_LIKE.has(env.APP_ENV) && env.WEB_TRUSTED_PROXY_HOPS === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['WEB_TRUSTED_PROXY_HOPS'],
+        message: 'must be set explicitly in staging and production',
+      });
+    }
+    // Phase 3 (D-037): the public pages forward each visitor's address to the API with the BFF
+    // credential. Without it, every visitor would share ONE per-client API budget, so a single
+    // visitor could exhaust the public pages for everyone.
+    if (PRODUCTION_LIKE.has(env.APP_ENV) && env.WEB_API_BFF_CREDENTIAL === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['WEB_API_BFF_CREDENTIAL'],
+        message: 'is required in staging and production (per-visitor public limits)',
+      });
+    }
     if (!anyLogin) return;
     for (const name of [
       'WEB_PUBLIC_ORIGIN',
@@ -129,15 +156,6 @@ export const webEnvSchema = z
       !env.WEB_PUBLIC_ORIGIN.startsWith('https://')
     ) {
       ctx.addIssue({ code: 'custom', path: ['WEB_PUBLIC_ORIGIN'], message: 'must use https' });
-    }
-    // R2-04: the proxy topology decides whose address the login limits see; it must be stated
-    // explicitly in staging and production, never left to a default.
-    if (PRODUCTION_LIKE.has(env.APP_ENV) && env.WEB_TRUSTED_PROXY_HOPS === undefined) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['WEB_TRUSTED_PROXY_HOPS'],
-        message: 'must be set explicitly in staging and production',
-      });
     }
     if (
       env.WEB_API_ORIGIN !== undefined &&

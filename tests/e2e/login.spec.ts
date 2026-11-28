@@ -3,7 +3,7 @@
 // the browser stores and sends the session cookie, that JavaScript cannot read it, that the
 // session is server-side (the API honours it and revokes it on logout), and that cross-site
 // logout is refused.
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures.js';
 
 const API = 'http://127.0.0.1:4100';
 const WEB = 'http://localhost:3100';
