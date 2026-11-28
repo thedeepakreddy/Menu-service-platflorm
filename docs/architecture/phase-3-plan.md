@@ -215,6 +215,16 @@ failure, scope expansion, or a failing gate.
   - e2e: 210 runs across three projects (90 at the end of M3.5, two projects).
   - Web unit tests: 227 (211 at the end of M3.5).
 
+**M3.6 — closure verification (addendum).** CI #37 on the first candidate `670fa20` was
+cancelled by my own documentation-only push (per-branch `cancel-in-progress`). CI #38 then
+failed on a flaky axe self-check, reproduced locally in 3 of 75 runs. Fixed:
+
+- the self-check is now deterministic;
+- the error page renders a `<title>`, found by axe and now covered in en and hu;
+- the e2e visitor-address pool is widened.
+
+The whole suite then passed 4 times over (864 runs). Details: report §6a.
+
 ## Out of scope
 
 - Phase 4: menu domain.

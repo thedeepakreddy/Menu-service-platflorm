@@ -20,18 +20,23 @@ const PAGES = [
 
 test('self-check: axe reports violations when they exist (the gate is not vacuous)', async ({
   page,
+  baseURL,
 }) => {
-  await page.goto('/e2e-cafe');
-  // Break the page on purpose: an unlabelled image, an empty link and a nameless button. (An
-  // inline style attribute cannot be used here: the strict CSP blocks it, as it should.)
-  await page.evaluate(() => {
-    const main = document.querySelector('main');
-    main?.insertAdjacentHTML(
-      'beforeend',
-      '<img src="data:image/gif;base64,R0lGODlhAQABAAAAACw="><a href="/x"></a>' +
-        '<button type="button"></button>',
-    );
-  });
+  // A static page with known violations, served on the app's own origin but outside React. An
+  // earlier version injected them into a live page; React hydration could remove them first,
+  // so the check was racy (3 of 75 local runs, and one CI run, reported nothing). This version is
+  // deterministic and still proves the exact axe configuration used below reports violations.
+  await page.route(`${baseURL ?? ''}/__axe-self-check`, (route) =>
+    route.fulfill({
+      contentType: 'text/html; charset=utf-8',
+      body:
+        '<!doctype html><html lang="en"><head><title>Axe self-check</title></head><body>' +
+        '<main><h1>Self-check</h1>' +
+        '<img src="data:image/gif;base64,R0lGODlhAQABAAAAACw="><a href="/x"></a>' +
+        '<button type="button"></button></main></body></html>',
+    }),
+  );
+  await page.goto('/__axe-self-check');
   const ids = (await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze()).violations.map(
     (v) => v.id,
   );
@@ -61,6 +66,34 @@ for (const locale of ['en-GB', 'hu-HU'] as const) {
     }
   });
 }
+
+test.describe('axe, error state (API unavailable)', () => {
+  for (const [locale, heading] of [
+    ['en-GB', 'Something went wrong'],
+    ['hu-HU', 'Valami hiba történt'],
+  ] as const) {
+    test(`${locale}: the error page has no WCAG 2.2 AA violations and its own title`, async ({
+      browser,
+    }) => {
+      // One visitor exhausts its API budget (120/min, D-037), so its next page is the error
+      // state: a real, deterministic way to reach error.tsx without touching the API process.
+      const context = await browser.newContext({
+        locale,
+        extraHTTPHeaders: visitorHeaders(`error-${locale}`),
+        viewport: test.info().project.use.viewport ?? null,
+      });
+      for (let i = 0; i < 121; i += 1) await context.request.get('/e2e-cafe');
+      const page = await context.newPage();
+      const res = await page.goto('/e2e-cafe');
+      expect(res?.status()).toBe(500);
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(heading);
+      await expect(page).toHaveTitle(heading);
+      const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
+      expect(results.violations.map((v) => v.id)).toEqual([]);
+      await context.close();
+    });
+  }
+});
 
 test.describe('keyboard (WCAG 2.1.1, 2.4.3, 2.4.7)', () => {
   test('tab order is skip link, venue, navigation, content, language; every stop shows focus', async ({

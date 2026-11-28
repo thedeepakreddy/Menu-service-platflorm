@@ -9,18 +9,32 @@ import { test as base } from '@playwright/test';
 
 export { expect } from '@playwright/test';
 
-/** A stable, distinct documentation-range address (TEST-NET-2/3, RFC 5737) for one test. */
+/**
+ * A stable, distinct address for one test run, from the RFC 2544 benchmarking range
+ * 198.18.0.0/15 (131,072 addresses). A small pool let unrelated runs collide with the visitor that
+ * deliberately exhausts its budget, so they were throttled at random (found in M3.6).
+ */
 export function visitorAddress(key: string): string {
   const digest = createHash('sha256').update(key).digest();
-  const net = (digest[0] ?? 0) % 2 === 0 ? '198.51.100' : '203.0.113';
-  return `${net}.${String(1 + ((digest[1] ?? 0) % 254))}`;
+  const second = 18 + ((digest[0] ?? 0) & 1);
+  return `198.${String(second)}.${String(digest[1] ?? 0)}.${String(1 + ((digest[2] ?? 0) % 254))}`;
+}
+
+/** One visitor per test run: a repeated or retried run must not inherit an exhausted budget. */
+function runKey(info: {
+  project: { name: string };
+  testId: string;
+  repeatEachIndex: number;
+  retry: number;
+}) {
+  return `${info.project.name}:${info.testId}:${String(info.repeatEachIndex)}:${String(info.retry)}`;
 }
 
 export const test = base.extend({
   extraHTTPHeaders: async ({ extraHTTPHeaders }, use, testInfo) => {
     await use({
       ...extraHTTPHeaders,
-      'x-forwarded-for': visitorAddress(`${testInfo.project.name}:${testInfo.testId}`),
+      'x-forwarded-for': visitorAddress(runKey(testInfo)),
     });
   },
 });
@@ -28,5 +42,5 @@ export const test = base.extend({
 /** Headers for a context a test creates itself (`browser.newContext`), as a further visitor. */
 export function visitorHeaders(label: string): { 'x-forwarded-for': string } {
   const info = test.info();
-  return { 'x-forwarded-for': visitorAddress(`${info.project.name}:${info.testId}:${label}`) };
+  return { 'x-forwarded-for': visitorAddress(`${runKey(info)}:${label}`) };
 }

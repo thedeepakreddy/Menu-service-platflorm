@@ -9,6 +9,9 @@ import { MESSAGES } from '../i18n/messages';
 export default function GlobalError({ reset }: { error: Error; reset: () => void }) {
   return (
     <html lang="en">
+      <head>
+        <title>{`${MESSAGES.en.error.title} / ${MESSAGES.hu.error.title}`}</title>
+      </head>
       <body>
         <main id="main">
           {(['en', 'hu'] as const).map((locale) => (

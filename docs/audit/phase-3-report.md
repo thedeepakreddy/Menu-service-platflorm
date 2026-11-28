@@ -24,17 +24,19 @@ Each milestone was implemented, verified locally, committed, pushed, and gated o
 of its exact commit. This was re-checked at the start of M3.6 against the GitHub Actions run
 list.
 
-| Milestone                                      | Commit    | CI run (exact `head_sha`) |
-| ---------------------------------------------- | --------- | ------------------------- |
-| M3.0 decisions and plan                        | `e7874e1` | #29 success               |
-| M3.1 resolver, routes, error states            | `809ed19` | #30 success               |
-| M3.2 tokens and default preset                 | `07c0546` | #31 success               |
-| M3.3 shell, four tabs, art-directed states     | `8072184` | #32 success               |
-| M3.4 localization, per-visitor public limits   | `9f57ee2` | #33 success               |
-| M3.5 CSP, caching, public/auth boundary        | `6db3712` | #34 success               |
-| M3.6 accessibility gate, tablet, layout checks | `cfad19e` | #35 success               |
-| M3.6 noindex and reduced-motion tests, draft   | `f5cad20` | #36 (see §6)              |
-| M3.6 review remediation and closure records    | see §6    | see §6                    |
+| Milestone                                      | Commit    | CI run (exact `head_sha`)   |
+| ---------------------------------------------- | --------- | --------------------------- |
+| M3.0 decisions and plan                        | `e7874e1` | #29 success                 |
+| M3.1 resolver, routes, error states            | `809ed19` | #30 success                 |
+| M3.2 tokens and default preset                 | `07c0546` | #31 success                 |
+| M3.3 shell, four tabs, art-directed states     | `8072184` | #32 success                 |
+| M3.4 localization, per-visitor public limits   | `9f57ee2` | #33 success                 |
+| M3.5 CSP, caching, public/auth boundary        | `6db3712` | #34 success                 |
+| M3.6 accessibility gate, tablet, layout checks | `cfad19e` | #35 success                 |
+| M3.6 noindex and reduced-motion tests, draft   | `f5cad20` | #36 success                 |
+| M3.6 review remediation (first candidate)      | `670fa20` | #37 **cancelled** (see §6a) |
+| M3.6 records: G-56                             | `4d52b6d` | #38 **failure** (see §6a)   |
+| M3.6 closure-verification fixes (candidate)    | see §6    | see §6                      |
 
 ## 2. Sources and reconciliation
 
@@ -108,8 +110,10 @@ list.
   - in English and Hungarian;
   - on desktop, mobile (Pixel 7) and tablet (iPad gen 7 viewport, Chromium);
   - **zero violations**.
-- **axe self-check.** Planted violations (`image-alt`, `link-name`, `button-name`) are reported,
-  so the gate is not vacuous.
+- **axe self-check.** A static page with planted violations (`image-alt`, `link-name`,
+  `button-name`) is reported, so the gate is not vacuous (§6a, item 2).
+- **axe on the error state** (API unavailable) in en and hu: zero violations, and the page has
+  its own title (§6a, item 3).
 - **Keyboard order** on the home page: skip link, venue, Home, Menu, Offers, Info, the three
   section links, English, Magyar.
   - Every stop shows an outline of at least 2 px; the ring is 3 px.
@@ -158,6 +162,35 @@ The final inspection found **no defects**.
 - **Not visible in still screenshots.** The pending indicator shows only during a navigation;
   an e2e test covers it.
 
+## 6a. Findings during closure verification
+
+1. **CI run #37 cancelled by a push of mine.**
+   - `670fa20` was the first candidate. The workflow cancels in-progress runs per branch
+     (`cancel-in-progress: true`), and the documentation-only push of `4d52b6d` at 05:59:09
+     cancelled #37 during its e2e step.
+   - No candidate is submitted without its own green exact-commit run. Pushes are now held
+     until a candidate's run has finished.
+2. **CI run #38 failed: a flaky test.**
+   - The run on `4d52b6d` (same code as `670fa20`) failed 1 of 210 tests: the axe self-check
+     on the tablet project reported no violations.
+   - Cause: the self-check injected broken elements into a live page, and React hydration
+     could remove them first. Reproduced locally in 3 of 75 runs.
+   - Fix: the self-check now runs axe on a static page served through `page.route`, so it no
+     longer races hydration. It passed 120 of 120 repeated runs.
+3. **Accessibility defect found while stress-testing: the error page had no title.**
+   - A repeated full-suite run hit the error state, where axe reported `document-title`
+     (serious; WCAG 2.4.2). The error state had never been scanned before.
+   - Fix: `error.tsx` and `global-error.tsx` now render a `<title>`.
+   - New axe tests reach the error state deterministically (one visitor exhausts its API
+     budget) in en and hu, and find zero violations.
+4. **Test infrastructure: visitor-address collisions.**
+   - Per-test visitor addresses came from a pool of 508 addresses, so unrelated runs could
+     collide with the visitor that deliberately exhausts its budget, and were then throttled.
+   - Addresses now come from 198.18.0.0/15 (131,072) and are keyed per run (repeat and retry
+     index).
+5. **Stability after the fixes:** the whole e2e suite was run 4 times over (`--repeat-each=4`,
+   864 runs) with **864 passed**.
+
 ## 6. Verification of the closure candidate
 
 _Recorded by the documentation-only commit that follows the candidate commit: the exact SHA,
@@ -189,8 +222,33 @@ the governing documents and the source, with no access to this session's reasoni
 | 12  | INFO     | If the proxy ever skipped a request, a client raw-segment header would be used | **Accepted:** the proxy matcher covers every path. The worst case is a non-canonical spelling, and the API's slug must still match |
 | 13  | INFO     | Screenshot inspection not evidenced in the repository                          | **Fixed:** contact sheets committed with hashes (§5)                                                                               |
 
-The remediation diff is re-checked by the same reviewer context before the candidate is
-submitted (§6).
+**Re-review of the remediation** (`cfad19e..670fa20`, same reviewer context, read-only):
+**PASS WITH CONDITIONS**.
+
+- All 13 dispositions above are accurate, and the fixes are correct.
+- No regressions. The new tests (byte-identical 404, pending indicator, `X-Robots-Tag`) cannot
+  pass vacuously.
+- The screenshot hashes match.
+
+Its new items and their dispositions:
+
+- **INFO-A:** the locale switch now requires `Content-Length`, and a proxy that turns request
+  bodies into chunked upstream requests would break it. Recorded as G-56: a staging smoke check
+  through the real proxy chain.
+- **INFO-B:** the first review's working tree already held the `f5cad20` test additions. This
+  changes nothing.
+
+Its remaining conditions are the same as this report's:
+
+- (a) exact-commit CI and clean-room evidence (§6);
+- (b) owner decisions OD-1 and OD-2;
+- (c) owner acceptance of D-041 and the preset.
+
+The fixes in §6a were made after the re-review. They touch only:
+
+- the axe self-check;
+- the e2e visitor fixture;
+- the error-state title and its new tests.
 
 ## 8. Open items, risks and blockers
 

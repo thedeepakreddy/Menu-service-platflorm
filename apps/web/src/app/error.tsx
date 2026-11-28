@@ -12,6 +12,8 @@ export default function ErrorPage({ reset }: { error: Error; reset: () => void }
   const messages = useMessages();
   return (
     <main id="main" className="mx-auto max-w-5xl px-4 pt-10 pb-12 sm:px-6 md:pt-20">
+      {/* React hoists this into <head>: the error state has its own title (WCAG 2.4.2). */}
+      <title>{messages.error.title}</title>
       <EmptyState
         art={<ErrorArt />}
         title={messages.error.title}
