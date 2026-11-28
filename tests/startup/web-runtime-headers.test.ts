@@ -32,7 +32,13 @@ function startWeb(appEnv: string): Promise<string> {
       ['node_modules/next/dist/bin/next', 'start', '-p', '0', '-H', '127.0.0.1'],
       {
         cwd: `${repoRoot}apps/web`,
-        env: { PATH: process.env.PATH ?? '', APP_ENV: appEnv },
+        // Phase 3: staging/production require WEB_API_ORIGIN. A closed local port: requests that
+        // reach the public tenant pages fail fast (their error state), which is fine for this test.
+        env: {
+          PATH: process.env.PATH ?? '',
+          APP_ENV: appEnv,
+          WEB_API_ORIGIN: 'https://127.0.0.1:1',
+        },
         detached: true,
         stdio: ['ignore', 'pipe', 'pipe'],
       },

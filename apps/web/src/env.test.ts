@@ -4,12 +4,19 @@ import { parseWebEnv } from './env';
 
 describe('parseWebEnv', () => {
   it('accepts a valid configuration', () => {
-    expect(parseWebEnv({ APP_ENV: 'production' })).toEqual({
+    expect(parseWebEnv({ APP_ENV: 'production', WEB_API_ORIGIN: 'https://api.example' })).toEqual({
       APP_ENV: 'production',
+      WEB_API_ORIGIN: 'https://api.example',
       WEB_OWNER_OIDC_SCOPES: '',
       WEB_OPERATOR_OIDC_SCOPES: '',
       WEB_TOKEN_REQUESTS_PER_MINUTE: 600,
     });
+  });
+
+  it('requires WEB_API_ORIGIN in staging and production for the public pages (Phase 3)', () => {
+    expect(() => parseWebEnv({ APP_ENV: 'production' })).toThrow(/WEB_API_ORIGIN is required/);
+    expect(() => parseWebEnv({ APP_ENV: 'staging' })).toThrow(/WEB_API_ORIGIN is required/);
+    expect(() => parseWebEnv({ APP_ENV: 'development' })).not.toThrow();
   });
 
   it('rejects a missing APP_ENV', () => {

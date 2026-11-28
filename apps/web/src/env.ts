@@ -57,7 +57,10 @@ export const webEnvSchema = z
     WEB_OPERATOR_OIDC_CLIENT_ID: z.string().min(1).max(500).optional(),
     WEB_OPERATOR_OIDC_CLIENT_SECRET: z.string().min(1).max(2000).optional(),
     WEB_OPERATOR_OIDC_SCOPES: z.string().max(1000).default(''),
-    /** Server-to-server API origin used by the BFF (D-034). Required when login is configured. */
+    /**
+     * Server-to-server API origin used by the BFF (D-034) and the public tenant pages (Phase 3).
+     * Required when login is configured and in staging/production.
+     */
     WEB_API_ORIGIN: exactOrigin.optional(),
     /** SECRET (D-034). Must equal the API's API_BFF_CREDENTIAL. */
     WEB_API_BFF_CREDENTIAL: bffCredential.optional(),
@@ -95,6 +98,15 @@ export const webEnvSchema = z
           message: 'must use https',
         });
       }
+    }
+    // Public tenant pages (Phase 3) are served from the API: staging and production need it even
+    // without login configured.
+    if (PRODUCTION_LIKE.has(env.APP_ENV) && env.WEB_API_ORIGIN === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['WEB_API_ORIGIN'],
+        message: 'is required in staging and production (public tenant pages)',
+      });
     }
     if (!anyLogin) return;
     for (const name of [

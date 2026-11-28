@@ -75,20 +75,7 @@ export class SingleUseSet {
   }
 }
 
-/**
- * The client address the web app attributes a request to. Next.js fills X-Forwarded-For with the
- * socket address only when the header is ABSENT, so a directly exposed server cannot trust it at
- * all. With `trustedHops` proxies in front (each appending one entry), the client is the entry
- * that many places from the right. Returns 'unknown' when it cannot be determined: the request
- * then shares one per-client budget (and the global limits still apply).
- */
-export function webClientAddress(forwardedFor: string | null, trustedHops: number): string {
-  if (trustedHops === 0 || forwardedFor === null) return 'unknown';
-  const hops = forwardedFor.split(',').map((h) => h.trim());
-  if (hops.length > 32) return 'unknown';
-  const candidate = hops[hops.length - trustedHops];
-  return candidate !== undefined && /^[0-9a-fA-F:.]{2,45}$/.test(candidate) ? candidate : 'unknown';
-}
+export { webClientAddress } from '../http/client-address';
 
 /** RFC 6749 §A.11: a code is printable ASCII; we also bound its length before any provider call. */
 export const AUTHORIZATION_CODE = /^[\x21-\x7e]{8,512}$/;

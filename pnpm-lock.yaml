@@ -358,9 +358,15 @@ importers:
       '@types/node':
         specifier: ^24.0.0
         version: 24.19.2
+      '@types/pg':
+        specifier: ^8.23.1
+        version: 8.23.1
       dependency-cruiser:
         specifier: ^18.0.0
         version: 18.8.0
+      pg:
+        specifier: ^8.23.1
+        version: 8.23.1
       typescript:
         specifier: ~6.0.3
         version: 6.0.3

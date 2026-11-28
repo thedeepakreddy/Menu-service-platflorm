@@ -109,3 +109,10 @@ Its §22 lists pre-production blockers PP-01 – PP-11.
 | G-47 | Operator account provisioning procedure (audit E-05, PP-09). Documented pre-production blocker; no procedure is invented or approved without a separate review (D-039)                | 10              | open                  |
 | G-48 | Owner invitation flow: not implemented; its design (SEQ-1) remains unapproved and belongs to its designated future phase (audit E-02, D-039)                                          | 6               | open (owner decision) |
 | G-49 | External human or third-party security review: still required before production (PP-10, D-039)                                                                                        | 10              | open                  |
+
+## H. Recorded during Phase 3 (2026-11-28)
+
+| ID   | Item                                                                                                                                                                                                                                            | Blocks          | Status     |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | ---------- |
+| G-50 | Hungarian platform strings (`apps/web/src/i18n/messages.ts`) were written without a native-speaker review. A native review is needed before production.                                                                                         | 10 (production) | open       |
+| G-51 | The tenant-safe 404 page is rendered in the browser. Next.js answers `notFound()` with its error shell (status 404, empty HTML), so visitors without JavaScript see a blank page. Revisit when Next.js behaviour or the routing design changes. | —               | open (LOW) |

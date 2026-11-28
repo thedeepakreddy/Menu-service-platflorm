@@ -2,7 +2,7 @@
 // (or appends it to $GITHUB_ENV as E2E_API_DATABASE_URL). Usage:
 //   TEST_DATABASE_ADMIN_URL=... node apps/api/test/db/provision-cli.ts platform_e2e
 // With E2E_SEED_OWNER_ISSUER and E2E_SEED_OWNER_SUBJECT set, it also seeds one owner account and
-// the tenant `e2e-cafe` for the browser login test.
+// the tenant `e2e-cafe` for the browser login test, plus the public-entry fixtures (Phase 3).
 import { appendFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
@@ -26,6 +26,19 @@ if (seedIssuer !== undefined && seedSubject !== undefined) {
             t AS (INSERT INTO app.tenants (slug, display_name) VALUES ('e2e-cafe', 'E2E Cafe') RETURNING id)
        INSERT INTO app.memberships (tenant_id, account_id) SELECT t.id, a.id FROM t, a`,
       [seedIssuer, seedSubject],
+    );
+    // Public-entry fixtures (Phase 3): a second active tenant, one whose display name is hostile
+    // markup (rendered as text, never as HTML), and one suspended and one retired tenant, which
+    // must be indistinguishable from an unknown slug. Synthetic names only.
+    await admin.query(
+      `INSERT INTO app.tenants (slug, display_name, status) VALUES
+         ('e2e-bistro', 'E2E Bistro', 'active'),
+         ('e2e-markup', '<script>window.__pwned=1</script> & <b>Bold</b>', 'active'),
+         ('e2e-closed', 'E2E Closed Venue', 'suspended'),
+         ('e2e-gone', 'E2E Retired Venue', 'retired'),
+         ('e2e-toggle-desktop', 'E2E Toggle Desktop', 'active'),
+         ('e2e-toggle-mobile', 'E2E Toggle Mobile', 'active'),
+         ('e2e-toggle-tablet', 'E2E Toggle Tablet', 'active')`,
     );
   } finally {
     await admin.end();

@@ -48,6 +48,28 @@ Each milestone is gated, and the next starts only after its gate passes:
 **Stop conditions:** a source conflict, an unapproved architecture change, a security or isolation
 failure, scope expansion, or a failing gate.
 
+## Milestone log
+
+**M3.1 — resolver, routes and error states.**
+
+- **Order change.** The typed string catalogue and the locale resolution (cookie, then
+  `Accept-Language`, then `en`) were brought forward from M3.4. The 404, error and empty states
+  need real strings in both locales, and there is to be no silent fallback to hard-coded text.
+  M3.4 keeps the locale switcher and the `Intl` formatting helpers.
+- **No `loading.tsx` under `[tenant]`.** A loading boundary starts streaming before the tenant is
+  resolved, so a missing tenant would be answered with status 200. Tenant pages therefore resolve
+  before the first byte is sent.
+- **The not-found page is rendered in the browser** (framework behaviour; Next.js 16.4.6).
+  - When `notFound()` is thrown on a route, Next.js answers with its error shell: status 404, an
+    empty `<html id="__next_error__">`, and the RSC payload.
+  - The browser then renders the shared not-found page from that payload.
+  - This was reproduced with a minimal route that only calls `notFound()`. The cause is not the
+    proxy or the root layout.
+  - Tenant safety holds: the status is correct, the server HTML holds no tenant data, and
+    unknown, suspended and retired tenants render the same page.
+  - The e2e test compares the rendered page and its title in a real browser.
+  - Without JavaScript a visitor gets a blank 404 page (G-51).
+
 ## Out of scope
 
 - Phase 4: menu domain.
