@@ -94,3 +94,20 @@ test.describe('anonymous customer context (P3-08, P3-13)', () => {
     }
   });
 });
+
+test.describe('search indexing stays off (D-040 O-7; P3-15)', () => {
+  test('every customer page, including not-found, is noindex and nofollow', async ({ page }) => {
+    for (const path of [...PAGES, '/no-such-venue', '/e2e-closed']) {
+      await page.goto(path);
+      // Next.js adds its own robots tag to 404 responses; every tag present must say noindex.
+      const contents = await page
+        .locator('meta[name="robots"]')
+        .evaluateAll((metas) => metas.map((m) => m.getAttribute('content') ?? ''));
+      expect(contents.length, path).toBeGreaterThan(0);
+      for (const content of contents) expect(content, path).toContain('noindex');
+      if (!path.startsWith('/no-such') && path !== '/e2e-closed') {
+        expect(contents, path).toEqual(['noindex, nofollow']);
+      }
+    }
+  });
+});

@@ -107,3 +107,21 @@ test.describe('keyboard (WCAG 2.1.1, 2.4.3, 2.4.7)', () => {
     await expect(page).toHaveURL('/e2e-cafe');
   });
 });
+
+test.describe('reduced motion (WCAG 2.3.3; P3-12)', () => {
+  test('transitions are effectively removed when the visitor prefers reduced motion', async ({
+    page,
+  }) => {
+    const duration = async () =>
+      page
+        .getByRole('navigation', { name: 'Main' })
+        .locator('a span')
+        .first()
+        .evaluate((el) => parseFloat(getComputedStyle(el).transitionDuration));
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.goto('/e2e-cafe');
+    expect(await duration()).toBeGreaterThanOrEqual(0.1);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    expect(await duration()).toBeLessThan(0.001);
+  });
+});
