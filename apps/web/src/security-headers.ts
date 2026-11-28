@@ -2,8 +2,8 @@ import type { WebEnv } from './env';
 
 /**
  * Baseline HTTP security headers for every web route (security baseline
- * D-019). A strict Content-Security-Policy needs nonce plumbing in Next.js
- * and is deferred to the customer platform phase (G-31, Phase 3).
+ * D-019). The strict, nonce-based Content-Security-Policy (G-31, Phase 3) is
+ * built per request by `contentSecurityPolicy()` below and set by `src/proxy.ts`.
  *
  * Two kinds of header, delivered differently (audit F-04):
  * - `webSecurityHeaders()` do not depend on the environment. They are set in
@@ -33,4 +33,59 @@ export function hstsHeader(appEnv: WebEnv['APP_ENV']): HeaderEntry | undefined {
   return appEnv === 'staging' || appEnv === 'production'
     ? { key: 'Strict-Transport-Security', value: 'max-age=31536000' }
     : undefined;
+}
+
+export type CspOptions = {
+  /** Fresh per request; never reused. */
+  nonce: string;
+  appEnv: WebEnv['APP_ENV'];
+  /** True only under `next dev`, whose React refresh needs eval. Never in a built app. */
+  devServer: boolean;
+  /**
+   * Origins a form submission may end up at besides our own: the OIDC issuers, because logout is
+   * a same-origin POST that redirects to the provider's end-session endpoint.
+   */
+  formActionOrigins: readonly string[];
+};
+
+/**
+ * Strict Content-Security-Policy (Phase 3 M3.5; G-31; Doc 01 §15 security). Scripts run only with
+ * the per-request nonce (`strict-dynamic` lets Next.js load its own chunks from a trusted script);
+ * no inline event handlers, no foreign scripts, no plugins, no framing, no `<base>` hijack, and
+ * forms post only to us and the identity providers. Tenant content is text only, so nothing
+ * tenant-supplied is ever allowed to run.
+ */
+export function contentSecurityPolicy(options: CspOptions): string {
+  const nonce = `'nonce-${options.nonce}'`;
+  const directives: [string, ...string[]][] = [
+    ['default-src', "'self'"],
+    [
+      'script-src',
+      "'self'",
+      nonce,
+      "'strict-dynamic'",
+      ...(options.devServer ? ["'unsafe-eval'"] : []),
+    ],
+    ['style-src', "'self'", nonce],
+    ['img-src', "'self'", 'data:', 'blob:'],
+    ['font-src', "'self'"],
+    ['connect-src', "'self'"],
+    ['object-src', "'none'"],
+    ['base-uri', "'none'"],
+    ['form-action', "'self'", ...options.formActionOrigins],
+    ['frame-ancestors', "'none'"],
+    ['frame-src', "'none'"],
+    ['worker-src', "'self'"],
+    ['manifest-src', "'self'"],
+  ];
+  if (options.appEnv === 'staging' || options.appEnv === 'production') {
+    directives.push(['upgrade-insecure-requests']);
+  }
+  return directives.map((d) => d.join(' ')).join('; ');
+}
+
+/** A fresh CSP nonce: 128 random bits, base64. */
+export function cspNonce(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return btoa(String.fromCharCode(...bytes));
 }

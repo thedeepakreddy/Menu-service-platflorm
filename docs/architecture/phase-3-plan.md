@@ -149,6 +149,34 @@ failure, scope expansion, or a failing gate.
 - **Screenshots inspected.** Footer and switcher at 320 and 1280 px, and the Hungarian 404 page
   after a switch. One defect, the footer rule being inset at 1280 px, was found and fixed.
 
+**M3.5 — CSP, caching and the public/auth boundary (P3-10, P3-13, P3-14; G-31).**
+
+- **Strict CSP** (`contentSecurityPolicy()` in `security-headers.ts`). It is built per request in
+  `proxy.ts` with a fresh 128-bit nonce. Next.js reads the nonce from the request's CSP header and
+  puts it on its own scripts. Every route is dynamic (checked in the build's route table), so no
+  prerendered page carries a stale nonce.
+  - `script-src` is `'self'`, the nonce and `'strict-dynamic'`: no `unsafe-inline`, and
+    `unsafe-eval` only under `next dev`.
+  - `object-src`, `base-uri`, `frame-ancestors` and `frame-src` are `'none'`.
+  - `form-action` is `'self'` plus the configured OIDC issuer origins. Logout is a same-origin
+    POST that redirects to the provider's end-session endpoint, and the login e2e test proves it
+    still works.
+  - `upgrade-insecure-requests` applies in staging and production only.
+- **e2e:**
+  - every page carries the policy, and every server-sent `<script>` has exactly that request's
+    nonce, which is fresh per request;
+  - real browsing (client navigation and the 404) raises zero `securitypolicyviolation` events,
+    and the app still hydrates.
+- **Caching.** Every customer page, the not-found page and the locale POST are `no-store`, and
+  none is `public`, `s-maxage` or `stale-while-revalidate`. Customer pages set no cookie.
+- **Boundary test** (`public-boundary.test.ts`). It walks every import, static and dynamic, from
+  every non-`/auth` route and from the proxy, and requires that nothing under `src/auth/` and
+  neither `openid-client` nor `jose` is reachable.
+  - A self-check confirms the walker does find them from the login routes.
+  - A deliberately planted import was caught by the test, then removed.
+- **Decision.** This was done as a test rather than a new dependency-cruiser rule. Adding a rule
+  needs an owner-reviewed fixture set (CLAUDE.md), so it remains a possible future hardening.
+
 ## Out of scope
 
 - Phase 4: menu domain.
