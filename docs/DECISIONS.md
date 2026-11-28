@@ -62,6 +62,7 @@ until the owner approves it.
 | [D-037](#d-037) | Rate limiting: pre-parse middleware, shared group budgets, trusted-proxy model    | approved (owner remediation) — implemented              | 2026-11-27 |
 | [D-038](#d-038) | Web login abuse controls                                                          | approved (owner C-03) — implemented                     | 2026-11-27 |
 | [D-039](#d-039) | Phase 2 formal closure: owner acceptance of R-01 – R-08 and approved defaults     | approved (owner) — Phase 2 CLOSED, PASS WITH CONDITIONS | 2026-11-28 |
+| [D-040](#d-040) | Phase 3 owner decisions O-1 – O-10 and implementation authorization               | approved (owner)                                        | 2026-11-28 |
 
 ---
 
@@ -1400,3 +1401,49 @@ of operational defaults
    - An external human or third-party security review is still required before production
      (PP-10, G-49).
 5. **Verdict recorded:** **PASS WITH CONDITIONS.**
+
+---
+
+## D-040
+
+**Title:** Phase 3 (Customer Platform Foundation): owner decisions O-1 – O-10 and implementation
+authorization
+**Status:** approved (owner), 2026-11-28.
+**Approval evidence:** owner message "Phase 3 — Owner Decisions and Implementation Authorization"
+(2026-11-28). It answers the planning report's decisions O-1 – O-10 and authorizes Phase 3
+implementation under the reconciled plan
+([`architecture/phase-3-plan.md`](architecture/phase-3-plan.md)).
+
+| ID   | Decision                                                                                                                                                                                                                                                                      |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| O-1  | A non-canonical slug (wrong case, encoded, reserved, malformed) returns the **same tenant-safe 404**. It is never redirected or normalized into a valid tenant route.                                                                                                         |
+| O-2  | Launch locales: **English (`en`) and Hungarian (`hu`)**. English is the platform default and the fallback. Locale configuration is **platform-wide**: no tenant locale storage in the database in Phase 3. No right-to-left requirement at launch. Resolves G-23 for Phase 3. |
+| O-3  | Governed **platform design tokens and one default theme preset**. No tenant theme selection, storage, customization UI or schema in Phase 3 (G-16 stays open for the tenant schema).                                                                                          |
+| O-4  | Keep the **four-tab navigation** (Home, Menu, Offers, Info). Pages whose content is not yet available show deliberate, polished, honest empty or unavailable states. No broken links, unfinished placeholders or misleading content.                                          |
+| O-5  | Content delivery means the **mechanism and contract seam only**, using provisioned tenant identity and platform configuration. No owner-managed or unpublished content is exposed.                                                                                            |
+| O-6  | **Dynamic rendering with `private, no-store`** responses. No shared page, tenant or public-data cache in Phase 3. Resolves G-37 for Phase 3.                                                                                                                                  |
+| O-7  | Keep **`noindex`** (D-009) through Phase 3.                                                                                                                                                                                                                                   |
+| O-8  | Add and evaluate **`@axe-core/playwright`** as a development dependency, under D-005 dependency governance.                                                                                                                                                                   |
+| O-9  | Tokens and UI components stay in **`apps/web`**. No `packages/ui` in Phase 3.                                                                                                                                                                                                 |
+| O-10 | Locale is resolved from an **explicit choice (session cookie) and `Accept-Language`**, with the approved fallback. No locale segment in URLs.                                                                                                                                 |
+
+**Additional owner constraints (binding):**
+
+1. **Locales:** a properly typed platform string catalogue for `en` and `hu`, with no silent
+   fallback to untranslated hard-coded strings.
+2. **Empty states:** art-directed, real responsive UI.
+3. **Mandatory gates:** accessibility, keyboard navigation, responsive behaviour and visual
+   inspection. Screenshots at 320, 390, 768 and 1280 px are generated and actually inspected, and
+   visual defects are fixed before closure.
+4. **Isolation and security:**
+   - strict tenant isolation, with no leakage, identity spoofing, host-header routing,
+     cache contamination or lifecycle disclosure;
+   - all Phase 1 and Phase 2 invariants kept.
+5. **Boundaries and evidence:**
+   - PP-01 – PP-11 stay open, and Phase 3 does not claim production approval;
+   - the PDFs are immutable;
+   - nothing from Phase 4 or later is implemented;
+   - no unverified claims.
+
+**Not authorized:** production deployment, release, merging, or anything else requiring separate
+approval.
