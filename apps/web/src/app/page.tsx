@@ -6,7 +6,7 @@ export default async function PlatformHome() {
   return (
     <main id="main" className="mx-auto max-w-2xl px-4 py-16">
       <h1 className="text-2xl font-semibold">{messages.platform.name}</h1>
-      <p className="mt-4 text-neutral-700">{messages.platform.intro}</p>
+      <p className="mt-4 text-ink-muted">{messages.platform.intro}</p>
     </main>
   );
 }

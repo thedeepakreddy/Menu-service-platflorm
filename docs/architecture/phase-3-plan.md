@@ -70,6 +70,25 @@ failure, scope expansion, or a failing gate.
   - The e2e test compares the rendered page and its title in a real browser.
   - Without JavaScript a visitor gets a blank 404 page (G-51).
 
+**M3.2 — tokens and default preset (O-3, O-9).**
+
+- **Where the tokens live.** The values are in `apps/web/src/design/tokens.ts`. The `@theme`
+  block in `apps/web/src/app/globals.css` repeats them, and a test keeps the two identical.
+- **Default preset "Linen".** Warm off-white surfaces, warm near-black ink and a terracotta
+  accent, with a separate blue focus ring.
+  - These values are a design proposal for owner review; no specification fixes the palette.
+  - There is no tenant theme selection, storage or schema.
+- **Tailwind's default palette is removed** (`--color-*: initial`). Only the semantic roles
+  (`bg-surface`, `text-ink-muted`, …) exist as utilities.
+- **Tests:**
+  - every pairing the UI uses meets WCAG 2.2 AA contrast;
+  - no source file outside the token files contains a hex value, a colour function, an arbitrary
+    colour utility or a palette utility;
+  - the patterns themselves are tested against known violations and known valid classes.
+- **Font.** A system font stack, so no web font is downloaded and no font host is contacted.
+- **Focus and motion.** The focus ring is 3 px, drawn outside the element on the surrounding
+  surface. `prefers-reduced-motion` is honoured globally.
+
 ## Out of scope
 
 - Phase 4: menu domain.

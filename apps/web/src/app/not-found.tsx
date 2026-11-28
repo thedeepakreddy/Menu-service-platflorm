@@ -10,7 +10,7 @@ export default async function NotFound() {
   return (
     <main id="main" className="mx-auto max-w-2xl px-4 py-16">
       <h1 className="text-2xl font-semibold">{messages.notFound.title}</h1>
-      <p className="mt-4 text-neutral-700">{messages.notFound.body}</p>
+      <p className="mt-4 text-ink-muted">{messages.notFound.body}</p>
     </main>
   );
 }

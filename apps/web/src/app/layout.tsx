@@ -18,7 +18,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const { locale, dir } = await getRequestLocale();
   return (
     <html lang={locale} dir={dir}>
-      <body className="min-h-screen bg-white text-neutral-900 antialiased">
+      <body className="min-h-screen bg-surface text-ink antialiased">
         <LocaleProvider locale={locale}>{children}</LocaleProvider>
       </body>
     </html>
